@@ -9,7 +9,8 @@ object MatchProgressionEngine {
         save: GameSave,
         fixtureId: String,
         result: MatchResult,
-        opponentOverall: Int
+        opponentOverall: Int,
+        clubOveralls: Map<String, Int> = emptyMap()
     ): GameSave {
         require(opponentOverall in 1..100) { "Opponent overall must be between 1 and 100." }
         val fixture = save.fixtures.firstOrNull { it.id == fixtureId }
@@ -18,6 +19,11 @@ object MatchProgressionEngine {
         require(fixture.homeClubId == save.clubId || fixture.awayClubId == save.clubId) {
             "Only the user's club fixtures can be completed through this flow."
         }
+        require(save.fixtures.none {
+            it.competition == "LEAGUE" &&
+                (it.homeClubId == save.clubId || it.awayClubId == save.clubId) &&
+                it.matchday < fixture.matchday && !it.played
+        }) { "Complete your earlier league fixtures before advancing to this matchday." }
 
         val updatedFixture = LeagueEngine.recordResult(fixture, result.homeGoals, result.awayGoals)
         val userIsHome = fixture.homeClubId == save.clubId
@@ -44,8 +50,12 @@ object MatchProgressionEngine {
             },
             amount = actualBudgetChange
         )
+        val userFixtureUpdates = save.fixtures.map { if (it.id == fixture.id) updatedFixture else it }
+        val matchdayUpdates = LeagueSimulationEngine.completeMatchday(
+            userFixtureUpdates, fixture.matchday, save.clubId, clubOveralls
+        )
         return save.copy(
-            fixtures = save.fixtures.map { if (it.id == fixture.id) updatedFixture else it },
+            fixtures = matchdayUpdates,
             budget = updatedBudget,
             developmentPoints = updatedPoints,
             financeLedger = save.financeLedger + entry
