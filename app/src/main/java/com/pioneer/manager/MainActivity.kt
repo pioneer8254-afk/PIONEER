@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 private val Navy = Color(0xFF08131F)
 private val Panel = Color(0xFF122334)
@@ -215,7 +216,7 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
                 selectedFixtureId = fixtureId
                 onTabChange("match")
             })
-            "match" -> MatchCenterScreen(save, selectedFixtureId)
+            "match" -> MatchCenterScreen(save, selectedFixtureId, onSaveChange)
             "table" -> LeagueTableScreen(save)
             "tactics" -> TacticsScreen(save, onSaveChange)
             "managers" -> ManagerStoreScreen(save, onSaveChange)
@@ -827,22 +828,43 @@ private fun FixturesScreen(save: GameSave, onPrepareMatch: (String) -> Unit) {
 }
 
 @Composable
-private fun MatchCenterScreen(save: GameSave, fixtureId: String?) {
+private fun MatchCenterScreen(save: GameSave, fixtureId: String?, onSaveChange: (GameSave) -> Unit) {
+    val context = LocalContext.current
     val fixture = save.fixtures.firstOrNull { it.id == fixtureId }
     val isHome = fixture?.homeClubId == save.clubId
     val opponentId = fixture?.let { if (isHome) it.awayClubId else it.homeClubId }
     val opponentName = opponentId?.let { ClubCatalog.find(it)?.name ?: it } ?: "نامشخص"
+    val opponentPlayers = remember(opponentId) {
+        opponentId?.let { PlayerCatalog.playersForClub(context, it) }.orEmpty()
+    }
     val lineup = StartingLineupEngine.validateFormation(save, save.formation)
     val salaryDue = EconomyEngine.managerSalaryDue(save.gameDay, save.managerLastPaidGameDay)
+    var match by remember(fixtureId) { mutableStateOf<CareerMatch?>(null) }
+    var resultSaved by remember(fixtureId) { mutableStateOf(false) }
+    var startError by remember(fixtureId) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(match?.session?.phase, match?.session?.secondsRemaining) {
+        val activeMatch = match ?: return@LaunchedEffect
+        if (activeMatch.session.phase == MatchPhase.FIRST_HALF ||
+            activeMatch.session.phase == MatchPhase.SECOND_HALF
+        ) {
+            delay(1000)
+            if (match == activeMatch) match = CareerMatchEngine.tick(activeMatch)
+        }
+    }
+
     val blockers = buildList {
         if (fixture == null) add("مسابقه‌ای از تقویم انتخاب نشده است.")
         if (fixture != null && fixture.played) add("این مسابقه قبلاً انجام شده است.")
         if (fixture != null && fixture.competition != "LEAGUE") add("فعلاً فقط مسابقات لیگ به موتور مسابقه متصل‌اند.")
-        if (save.players.isEmpty()) add("فهرست بازیکنان باشگاه هنوز وارد نشده است.")
+        if (save.players.isEmpty()) add("فهرست بازیکنان باشگاه در ذخیره بازی موجود نیست.")
         if (!lineup.isValid) addAll(lineup.errors)
         if (salaryDue) add("حقوق سرمربی سررسید شده؛ ابتدا آن را پرداخت کنید.")
-        if (opponentId != null) add("فهرست معتبر ۱۱ بازیکن حریف هنوز در داده‌های بازی موجود نیست.")
+        if (opponentId != null && opponentPlayers.size < StartingLineupEngine.REQUIRED_PLAYERS) {
+            add("فهرست معتبر بازیکنان حریف در داده‌های فصل موجود نیست.")
+        }
     }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         horizontalAlignment = Alignment.End,
@@ -859,28 +881,105 @@ private fun MatchCenterScreen(save: GameSave, fixtureId: String?) {
                     color = Muted, fontSize = 12.sp
                 )
                 Text("آرایش: ${save.formation}  •  بازیکنان باشگاه: ${save.players.size}/35", color = Mint, fontSize = 12.sp)
+                Text("بازیکنان ثبت‌شده حریف: ${opponentPlayers.size}", color = Muted, fontSize = 11.sp)
             }
         }
-        Text("بررسی پیش از شروع", color = White, fontWeight = FontWeight.Bold)
-        if (blockers.isEmpty()) {
-            Text("همه شرایط شروع مسابقه برقرار است.", color = Mint)
-        } else {
-            blockers.distinct().forEach { reason ->
-                Card(colors = CardDefaults.cardColors(containerColor = PanelLight), shape = RoundedCornerShape(12.dp)) {
-                    Text("•  $reason", color = Color(0xFFFFC36B), modifier = Modifier.fillMaxWidth().padding(12.dp), fontSize = 13.sp)
+
+        if (match == null && fixture?.played == true) {
+            Card(colors = CardDefaults.cardColors(containerColor = PanelLight), shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.End) {
+                    Text("نتیجه ثبت‌شده", color = Mint, fontWeight = FontWeight.Bold)
+                    Text("${fixture.homeGoals ?: 0}  -  ${fixture.awayGoals ?: 0}", color = White, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        "${ClubCatalog.find(fixture.homeClubId)?.name ?: fixture.homeClubId}  •  ${ClubCatalog.find(fixture.awayClubId)?.name ?: fixture.awayClubId}",
+                        color = Muted, fontSize = 11.sp
+                    )
                 }
             }
         }
-        Button(
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(disabledContainerColor = PanelLight, disabledContentColor = Muted)
-        ) { Text("شروع مسابقه — پس از تکمیل داده‌های واقعی") }
-        Text(
-            "برای جلوگیری از نتیجه‌سازی با بازیکنان فرضی، شروع مسابقه تا زمان ورود ترکیب واقعی هر دو تیم غیرفعال است.",
-            color = Muted, fontSize = 11.sp
-        )
+
+        if (match == null && fixture?.played != true) {
+            Text("بررسی پیش از شروع", color = White, fontWeight = FontWeight.Bold)
+            if (blockers.isEmpty()) {
+                Text("همه شرایط شروع مسابقه برقرار است.", color = Mint)
+            } else {
+                blockers.distinct().forEach { reason ->
+                    Card(colors = CardDefaults.cardColors(containerColor = PanelLight), shape = RoundedCornerShape(12.dp)) {
+                        Text("•  $reason", color = Color(0xFFFFC36B), modifier = Modifier.fillMaxWidth().padding(12.dp), fontSize = 13.sp)
+                    }
+                }
+            }
+            startError?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 12.sp) }
+            Button(
+                onClick = {
+                    startError = null
+                    match = runCatching {
+                        CareerMatchEngine.start(save, fixture!!.id, opponentPlayers, salaryDue)
+                    }.onFailure { startError = it.message ?: "شروع مسابقه ناموفق بود." }.getOrNull()
+                },
+                enabled = blockers.isEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB45C), contentColor = Navy)
+            ) { Text("شروع مسابقه") }
+        }
+
+        match?.let { active ->
+            val session = active.session
+            val homeName = fixture?.let { ClubCatalog.find(it.homeClubId)?.name ?: it.homeClubId } ?: "Home"
+            val awayName = fixture?.let { ClubCatalog.find(it.awayClubId)?.name ?: it.awayClubId } ?: "Away"
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF102B31)), shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        when (session.phase) {
+                            MatchPhase.FIRST_HALF -> "نیمه اول"
+                            MatchPhase.HALF_TIME -> "بین دو نیمه"
+                            MatchPhase.SECOND_HALF -> "نیمه دوم"
+                            MatchPhase.FULL_TIME -> "پایان مسابقه"
+                            MatchPhase.READY -> "آماده شروع"
+                        },
+                        color = Color(0xFFFFC36B), fontWeight = FontWeight.Bold
+                    )
+                    val shownResult = session.finalResult ?: session.firstHalfResult
+                    if (shownResult != null) {
+                        Text("${shownResult.homeGoals}  -  ${shownResult.awayGoals}", color = White, fontSize = 38.sp, fontWeight = FontWeight.Black)
+                    } else {
+                        Text("0  -  0", color = White, fontSize = 38.sp, fontWeight = FontWeight.Black)
+                    }
+                    Text("$homeName  •  $awayName", color = Muted, fontSize = 11.sp)
+                    if (session.phase == MatchPhase.FIRST_HALF || session.phase == MatchPhase.SECOND_HALF) {
+                        Text("${session.secondsRemaining} ثانیه تا پایان این نیمه", color = Mint, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                    if (session.phase == MatchPhase.HALF_TIME) {
+                        Text("نتیجه نیمه اول ثبت شد. تاکتیک ذخیره‌شده برای نیمه دوم اعمال می‌شود.", color = Muted, fontSize = 12.sp)
+                        Button(
+                            onClick = { match = CareerMatchEngine.continueAfterHalfTime(active, save.tactics, isHome) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Navy)
+                        ) { Text("شروع نیمه دوم") }
+                    }
+                    if (session.phase == MatchPhase.FULL_TIME) {
+                        val final = session.finalResult!!
+                        Text("مالکیت: ${final.homePossession}%  •  ${100 - final.homePossession}%", color = White, fontSize = 12.sp)
+                        Text("شوت: ${final.homeShots} - ${final.awayShots}  •  در چارچوب: ${final.homeShotsOnTarget} - ${final.awayShotsOnTarget}", color = Muted, fontSize = 11.sp)
+                        Text("پاس موفق: ${final.homeSuccessfulPasses} - ${final.awaySuccessfulPasses}", color = Muted, fontSize = 11.sp)
+                        if (resultSaved || fixture?.played == true) {
+                            Text("نتیجه و پاداش در ذخیره بازی ثبت شد.", color = Mint, fontWeight = FontWeight.Bold)
+                        } else {
+                            Button(
+                                onClick = {
+                                    runCatching { CareerMatchEngine.complete(save, active) }
+                                        .onSuccess { onSaveChange(it); resultSaved = true }
+                                        .onFailure { startError = it.message ?: "ثبت نتیجه ناموفق بود." }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Navy)
+                            ) { Text("ثبت نتیجه و دریافت پاداش") }
+                        }
+                    }
+                }
+            }
+            startError?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 12.sp) }
+        }
     }
 }
 
