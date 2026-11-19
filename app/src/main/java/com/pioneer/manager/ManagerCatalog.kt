@@ -35,7 +35,7 @@ object ManagerCatalog {
 }
 
 object ManagerEngine {
-    fun saleValue(manager: Manager): Long = manager.transferPrice / 2
+    fun saleValue(manager: Manager): Long = manager.transferPrice * 9 / 10
 
     fun buy(manager: Manager, budget: Long): Long {
         require(budget >= manager.transferPrice) { "Insufficient budget to hire manager." }
