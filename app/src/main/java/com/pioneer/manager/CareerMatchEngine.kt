@@ -35,7 +35,8 @@ object CareerMatchEngine {
         val userPlayers = StartingLineupEngine.selectedPlayers(save)
         val userIsHome = fixture.homeClubId == save.clubId
         val session = MatchSessionEngine.start(
-            MatchSession(homeTactics = save.tactics),
+            if (userIsHome) MatchSession(homeTactics = save.tactics)
+            else MatchSession(awayTactics = save.tactics),
             managerSalaryIsDue
         )
         return CareerMatch(
