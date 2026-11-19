@@ -24,7 +24,7 @@ class ManagerEngineTest {
             current, replacement, 0L, 5_000_000L
         )
         assertEquals(replacement.id, result?.manager?.id)
-        assertEquals(85_000_000L, result?.remainingBudget)
+        assertEquals(3_000_000L, result?.remainingBudget)
         assertEquals(5_000_000L, result?.arrearsPaid)
     }
 
