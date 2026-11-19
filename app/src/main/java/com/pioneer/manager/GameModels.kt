@@ -1,6 +1,12 @@
 package com.pioneer.manager
 
-data class Club(val id: String, val name: String, val division: Division, val initialBudgetMillions: Int)
+data class Club(
+    val id: String,
+    val name: String,
+    val division: Division,
+    val initialBudgetMillions: Int,
+    val initialManagerName: String = "To be confirmed"
+)
 
 enum class Division(val displayName: String, val matchesPerTeam: Int, val relegationPlaces: Int) {
     PREMIER_LEAGUE("Premier League", 38, 3),
@@ -47,6 +53,7 @@ data class GameSave(
     val clubId: String,
     val clubName: String,
     val budget: Long,
+    val managerName: String = "To be confirmed",
     val season: Int = 1,
     val gameDay: Int = 1,
     val lastTickEpochMillis: Long = System.currentTimeMillis(),
