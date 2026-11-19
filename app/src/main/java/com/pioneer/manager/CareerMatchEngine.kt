@@ -48,14 +48,19 @@ object CareerMatchEngine {
         )
     }
 
-    fun complete(save: GameSave, match: CareerMatch): GameSave {
+    fun complete(
+        save: GameSave,
+        match: CareerMatch,
+        clubOveralls: Map<String, Int> = emptyMap()
+    ): GameSave {
         val result = match.session.finalResult
             ?: throw IllegalStateException("The match must reach full time before it can be saved.")
         return MatchProgressionEngine.completeLeagueFixture(
             save = save,
             fixtureId = match.fixtureId,
             result = result,
-            opponentOverall = match.opponentOverall
+            opponentOverall = match.opponentOverall,
+            clubOveralls = clubOveralls
         ).copy(activeMatch = null)
     }
 
