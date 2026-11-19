@@ -22,7 +22,9 @@ data class Player(
     val dribbling: Int,
     val defending: Int,
     val physical: Int,
-    val contractSeasons: Int = 1
+    val contractSeasons: Int = 1,
+    val goalkeeping: Int = 1,
+    val tacticalIq: Int = 50
 )
 
 data class Tactics(
