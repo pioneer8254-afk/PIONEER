@@ -37,16 +37,16 @@ object TransferEngine {
         )
     }
 
-    fun sellPlayer(squad: List<Player>, playerId: String, budget: Long, gameDay: Int): TransferResult {
+    fun sellPlayer(squad: List<Player>, playerId: String, budget: Long, counters: TransferCounters): TransferResult {
         val player = squad.firstOrNull { it.id == playerId } ?: error("Player not found in squad.")
         val price = EconomyEngine.playerMarketValue(player)
         return TransferResult(
             squad = squad.filterNot { it.id == playerId },
             budget = budget + price,
-            counters = TransferCounters(gameDay = gameDay),
+            counters = counters,
             financeEntry = FinanceEntry(
-                id = "sell-" + player.id + "-" + gameDay,
-                gameDay = gameDay,
+                id = "sell-" + player.id + "-" + counters.gameDay,
+                gameDay = counters.gameDay,
                 category = "TRANSFER",
                 description = "Sold " + player.name,
                 amount = price
