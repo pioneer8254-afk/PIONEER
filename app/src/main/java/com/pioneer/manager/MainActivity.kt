@@ -222,8 +222,8 @@ private fun HomeScreen(save: GameSave) {
     val upcoming = clubFixtures.firstOrNull { !it.played }
     val wins = played.count { fixture ->
         val home = fixture.homeClubId == save.clubId
-        val scored = if (home) fixture.result?.homeGoals else fixture.result?.awayGoals
-        val conceded = if (home) fixture.result?.awayGoals else fixture.result?.homeGoals
+        val scored = if (home) fixture.homeGoals else fixture.awayGoals
+        val conceded = if (home) fixture.awayGoals else fixture.homeGoals
         scored != null && conceded != null && scored > conceded
     }
     val opponentId = upcoming?.let {
