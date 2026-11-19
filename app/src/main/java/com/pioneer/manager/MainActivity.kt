@@ -208,12 +208,12 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
         when (activeTab) {
             "home" -> HomeScreen(save)
-            "squad" -> InfoScreen("ترکیب تیم", "بانک بازیکنان واقعی فصل 2026/27 و کارت‌های شش‌ضلعی در گام بعدی متصل می‌شود.")
+            "squad" -> SquadScreen(save, onSaveChange)
             "fixtures" -> FixturesScreen(save)
             "table" -> LeagueTableScreen(save)
             "tactics" -> TacticsScreen(save, onSaveChange)
             "managers" -> ManagerStoreScreen(save, onSaveChange)
-            "market" -> InfoScreen("نقل‌وانتقالات", "بازار خرید، فروش و معاوضه با سقف‌های روزانه طبق قوانین بازی در دست ساخت است.")
+            "market" -> MarketScreen(save, onSaveChange)
             "upgrade" -> InfoScreen("ارتقای بازیکنان", "سیستم امتیاز ارتقا و انتخاب ویژگی اختصاصی یا خودکار در مرحله بعد اضافه می‌شود.")
             "honors" -> InfoScreen("افتخارات", "جام‌ها و جوایز پایان فصل در این بخش ثبت خواهند شد.")
             "finance" -> FinanceScreen(save, onSaveChange)
@@ -360,6 +360,167 @@ private fun StatCard(
             Text(title, color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
             Text(value, color = accent, fontSize = 19.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
+    }
+}
+
+@Composable
+private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
+    var selectedPlayer by remember { mutableStateOf<Player?>(null) }
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("${save.players.size} / 35", color = Color(0xFF75E7C0), fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Column(horizontalAlignment = Alignment.End) {
+                Text("ترکیب باشگاه", color = White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                Text("مدیریت بازیکنان ثبت‌شده در باشگاه", color = Muted, fontSize = 11.sp)
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatCard("دروازه‌بان", save.players.count { it.position == "GK" }.toString(), Modifier.weight(1f), Color(0xFFFFC56B))
+            StatCard("مدافع", save.players.count { it.position in listOf("CB", "LB", "RB", "LWB", "RWB") }.toString(), Modifier.weight(1f), Color(0xFF71B9FF))
+            StatCard("هافبک و مهاجم", save.players.count { it.position !in listOf("GK", "CB", "LB", "RB", "LWB", "RWB") }.toString(), Modifier.weight(1f), Color(0xFFB69AFF))
+        }
+        if (save.players.isEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("بانک بازیکنان هنوز متصل نشده است", color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text("در ذخیره فعلی بازیکنی ثبت نشده است. برای حفظ اعتبار اطلاعات، نام و امتیاز بازیکنان ساختگی نمایش داده نمی‌شود.", color = Muted, fontSize = 12.sp, lineHeight = 19.sp)
+                    Text("ظرفیت نهایی ترکیب: 35 بازیکن", color = Color(0xFF75E7C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        } else {
+            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                items(save.players, key = { it.id }) { player ->
+                    PlayerRosterCard(player = player, onClick = { selectedPlayer = player })
+                }
+            }
+        }
+        Text("OVR بر اساس پست بازیکن محاسبه می‌شود • انتخاب هر کارت برای جزئیات", color = Muted, fontSize = 10.sp)
+    }
+    selectedPlayer?.let { player ->
+        AlertDialog(
+            onDismissRequest = { selectedPlayer = null },
+            title = { Text(player.name, fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("${player.position}  •  OVR ${player.overall}  •  ${player.age} سال", fontWeight = FontWeight.Bold)
+                    Text("ملیت: ${player.nationality}")
+                    Text("سرعت ${player.pace}  |  شوت ${player.shooting}  |  پاس ${player.passing}")
+                    Text("دریبل ${player.dribbling}  |  دفاع ${player.defending}  |  قدرت ${player.physical}")
+                    Text("ارزش تخمینی: €" + "%,d".format(EconomyEngine.playerMarketValue(player)))
+                    Text("مدت قرارداد: ${player.contractSeasons} فصل")
+                }
+            },
+            confirmButton = { TextButton(onClick = { selectedPlayer = null }) { Text("بستن") } }
+        )
+    }
+}
+
+@Composable
+private fun PlayerRosterCard(player: Player, onClick: () -> Unit) {
+    val positionColor = when (player.position) {
+        "GK" -> Color(0xFFFFC56B)
+        "CB", "LB", "RB", "LWB", "RWB" -> Color(0xFF71B9FF)
+        "CM", "CDM", "CAM", "LM", "RM" -> Color(0xFFB69AFF)
+        else -> Color(0xFFFF9B68)
+    }
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Panel),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(13.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(player.overall.toString(), color = positionColor, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                Text(player.position, color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(player.name, color = White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("${player.age} سال  •  ${player.nationality}", color = Muted, fontSize = 10.sp)
+                Text("قرارداد: ${player.contractSeasons} فصل", color = positionColor, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MarketScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
+    var pendingSale by remember { mutableStateOf<Player?>(null) }
+    val daily = EconomyEngine.resetDailyCounters(save.transferCounters, save.gameDay)
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("بازار نقل‌وانتقالات", color = White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+        Text("خرید، فروش و مدیریت بودجه باشگاه", color = Muted, fontSize = 11.sp)
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF10313A)), shape = RoundedCornerShape(18.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(15.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("بودجه نقل‌وانتقالات", color = Color(0xFFB8D7D0), fontSize = 11.sp)
+                Text("€" + "%,d".format(save.budget), color = Color(0xFF75E7C0), fontSize = 24.sp, fontWeight = FontWeight.Black)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("معاوضه امروز: ${daily.swaps} / 3", color = White, fontSize = 10.sp)
+                    Text("خرید امروز: ${daily.purchases} / 3", color = White, fontSize = 10.sp)
+                }
+            }
+        }
+        Text("فهرست بازیکنان باشگاه", color = White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        if (save.players.isEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("بازار خرید در انتظار بانک بازیکنان معتبر است", color = White, fontWeight = FontWeight.Bold)
+                    Text("در حال حاضر فهرست قابل‌تأییدی از بازیکنان قابل خرید به پروژه متصل نیست. به همین دلیل گزینه خرید بازیکن ساختگی یا قیمت غیرواقعی ارائه نمی‌شود.", color = Muted, fontSize = 12.sp, lineHeight = 19.sp)
+                }
+            }
+        } else {
+            Text("برای فروش بازیکن، گزینه فروش را انتخاب کن. حداقل 11 بازیکن در ترکیب حفظ می‌شود.", color = Muted, fontSize = 11.sp)
+            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(save.players, key = { it.id }) { player ->
+                    Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(15.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(11.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(horizontalAlignment = Alignment.Start) {
+                                Text("€" + "%,d".format(EconomyEngine.playerMarketValue(player)), color = Color(0xFF75E7C0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Button(
+                                    onClick = { pendingSale = player },
+                                    enabled = save.players.size > 11,
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9B5360), contentColor = White)
+                                ) { Text("فروش", fontWeight = FontWeight.Bold) }
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(player.name, color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text("${player.position}  •  OVR ${player.overall}", color = Muted, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    pendingSale?.let { player ->
+        AlertDialog(
+            onDismissRequest = { pendingSale = null },
+            title = { Text("تأیید فروش بازیکن") },
+            text = { Text("آیا از فروش ${player.name} به ارزش تخمینی €" + "%,d".format(EconomyEngine.playerMarketValue(player)) + " مطمئن هستی؟") },
+            confirmButton = {
+                TextButton(onClick = {
+                    runCatching {
+                        val result = TransferEngine.sellPlayer(save.players, player.id, save.budget, daily)
+                        onSaveChange(save.copy(
+                            players = result.squad,
+                            budget = result.budget,
+                            transferCounters = result.counters,
+                            financeLedger = save.financeLedger + result.financeEntry
+                        ))
+                    }
+                    pendingSale = null
+                }) { Text("تأیید فروش") }
+            },
+            dismissButton = { TextButton(onClick = { pendingSale = null }) { Text("انصراف") } }
+        )
     }
 }
 
