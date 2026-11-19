@@ -197,7 +197,7 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
             "market" -> InfoScreen("نقل‌وانتقالات", "بازار خرید، فروش و معاوضه با سقف‌های روزانه طبق قوانین بازی در دست ساخت است.")
             "upgrade" -> InfoScreen("ارتقای بازیکنان", "سیستم امتیاز ارتقا و انتخاب ویژگی اختصاصی یا خودکار در مرحله بعد اضافه می‌شود.")
             "honors" -> InfoScreen("افتخارات", "جام‌ها و جوایز پایان فصل در این بخش ثبت خواهند شد.")
-            "finance" -> InfoScreen("امور مالی", "درآمد مسابقه، اسپانسر، خرید و فروش و حقوق مربی در این بخش ثبت می‌شود.")
+            "finance" -> FinanceScreen(save, onSaveChange)
             "news" -> InfoScreen("اخبار باشگاه", "رویدادهای مهم باشگاه و اعلان‌ها در این بخش نمایش داده می‌شوند.")
             "settings" -> SettingsScreen(save) { newName ->
                 onSaveChange(save.copy(clubName = newName.trim()))
@@ -551,5 +551,87 @@ private fun ManagerStoreScreen(save: GameSave, onSaveChange: (GameSave) -> Unit)
                 TextButton(onClick = { pendingManager = null }) { Text("انصراف") }
             }
         )
+    }
+}
+
+
+@Composable
+private fun FinanceScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
+    val activeSponsor = save.sponsorContract?.takeIf { it.seasonNumber == save.season }
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text("امور مالی", color = Mint, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.End) {
+                Text("موجودی باشگاه", color = Muted, fontSize = 12.sp)
+                Text("€" + "%,d".format(save.budget), color = Mint, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                Text("فصل " + save.season, color = Muted, fontSize = 11.sp)
+            }
+        }
+        Text("قرارداد اسپانسر", color = Mint, fontWeight = FontWeight.Bold)
+        if (activeSponsor != null) {
+            Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(14.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(13.dp), horizontalAlignment = Alignment.End) {
+                    Text(activeSponsor.sponsorName, color = White, fontWeight = FontWeight.Bold)
+                    Text("درآمد ثابت این فصل: €" + "%,d".format(activeSponsor.payment), color = Mint, fontSize = 12.sp)
+                }
+            }
+        } else {
+            Text("برای این فصل هنوز اسپانسری انتخاب نشده است.", color = Muted, fontSize = 12.sp)
+            SponsorCatalog.offers.forEach { offer ->
+                Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = {
+                                val contract = SponsorEngine.sign(offer, save.season, save.sponsorContract)
+                                val entry = FinanceEntry(
+                                    id = "sponsor-" + offer.name.lowercase().replace(" ", "-") + "-" + save.season,
+                                    gameDay = save.gameDay,
+                                    category = "SPONSOR",
+                                    description = "Season sponsor: " + offer.name,
+                                    amount = offer.seasonPayment
+                                )
+                                onSaveChange(save.copy(
+                                    sponsorContract = contract,
+                                    budget = save.budget + offer.seasonPayment,
+                                    financeLedger = save.financeLedger + entry
+                                ))
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Navy)
+                        ) { Text("انتخاب") }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(offer.name, color = White, fontWeight = FontWeight.Bold)
+                            Text("€" + "%,d".format(offer.seasonPayment) + " / فصل", color = Muted, fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        }
+        Divider(color = PanelLight)
+        Text("تاریخچه مالی", color = Mint, fontWeight = FontWeight.Bold)
+        if (save.financeLedger.isEmpty()) {
+            Text("هنوز تراکنشی ثبت نشده است.", color = Muted, fontSize = 12.sp)
+        } else {
+            save.financeLedger.sortedByDescending { it.gameDay }.take(30).forEach { entry ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text((if (entry.amount >= 0) "+" else "") + "€" + "%,d".format(entry.amount), color = if (entry.amount >= 0) Mint else Color(0xFFFF8A80), fontSize = 12.sp)
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(entry.description, color = White, fontSize = 12.sp)
+                        Text("روز " + entry.gameDay + " • " + entry.category, color = Muted, fontSize = 10.sp)
+                    }
+                }
+                Divider(color = PanelLight)
+            }
+        }
     }
 }
