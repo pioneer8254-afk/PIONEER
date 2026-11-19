@@ -946,6 +946,16 @@ private fun MatchCenterScreen(save: GameSave, fixtureId: String?, onSaveChange: 
     val opponentPlayers = remember(opponentId) {
         opponentId?.let { PlayerCatalog.playersForClub(context, it) }.orEmpty()
     }
+    val leagueClubOveralls = remember {
+        PlayerCatalog.allPlayers(context).groupBy { it.clubId }.mapValues { (_, roster) ->
+            roster.sortedByDescending { it.player.overall }
+                .take(StartingLineupEngine.REQUIRED_PLAYERS)
+                .map { it.player.overall }
+                .average()
+                .toInt()
+                .coerceIn(1, 100)
+        }
+    }
     val lineup = StartingLineupEngine.validateFormation(save, save.formation)
     val salaryDue = EconomyEngine.managerSalaryDue(save.gameDay, save.managerLastPaidGameDay)
     var match by remember(fixtureId) {
@@ -972,6 +982,11 @@ private fun MatchCenterScreen(save: GameSave, fixtureId: String?, onSaveChange: 
         if (fixture == null) add("مسابقه‌ای از تقویم انتخاب نشده است.")
         if (fixture != null && fixture.played) add("این مسابقه قبلاً انجام شده است.")
         if (fixture != null && fixture.competition != "LEAGUE") add("فعلاً فقط مسابقات لیگ به موتور مسابقه متصل‌اند.")
+        if (fixture != null && save.fixtures.any {
+                it.competition == "LEAGUE" &&
+                    (it.homeClubId == save.clubId || it.awayClubId == save.clubId) &&
+                    it.matchday < fixture.matchday && !it.played
+            }) add("ابتدا مسابقات عقب‌افتاده هفته‌های قبلی را انجام بده.")
         if (save.activeMatch != null && save.activeMatch.fixtureId != fixtureId) {
             add("یک مسابقه ناتمام ذخیره شده است؛ ابتدا همان مسابقه را از تقویم باز کنید.")
         }
@@ -1093,7 +1108,7 @@ private fun MatchCenterScreen(save: GameSave, fixtureId: String?, onSaveChange: 
                         } else {
                             Button(
                                 onClick = {
-                                    runCatching { CareerMatchEngine.complete(save, active) }
+                                    runCatching { CareerMatchEngine.complete(save, active, leagueClubOveralls) }
                                         .onSuccess { onSaveChange(it); resultSaved = true }
                                         .onFailure { startError = it.message ?: "ثبت نتیجه ناموفق بود." }
                                 },
