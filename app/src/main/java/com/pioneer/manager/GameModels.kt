@@ -71,6 +71,7 @@ data class GameSave(
     val tactics: Tactics = Tactics(),
     val fixtures: List<Fixture> = emptyList(),
     val players: List<Player> = emptyList(),
+    val developmentPoints: Int = 0,
     val transferCounters: TransferCounters = TransferCounters(gameDay = 1),
     val financeLedger: List<FinanceEntry> = emptyList(),
     val sponsorContract: SponsorContract? = null
