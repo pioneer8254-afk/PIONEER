@@ -7,7 +7,7 @@ import org.junit.Test
 class PlayerDevelopmentEngineTest {
     @Test
     fun goalkeeperAutoUpgradeTargetsGoalkeeping() {
-        val keeper = Player("gk", "Keeper", 25, "England", "GK", 80, 60, 30, 65, 40, 70, 75, goalkeeping = 80)
+        val keeper = Player("gk", "Keeper", 25, "England", "GK", 80, 60, 30, 65, 40, 90, 90, goalkeeping = 80, tacticalIq = 90)
         assertEquals(PlayerAttribute.GOALKEEPING, PlayerDevelopmentEngine.automaticAttribute(keeper))
     }
 
