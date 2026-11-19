@@ -161,6 +161,20 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
         "tactics" to "تاکتیک", "managers" to "مربیان", "market" to "بازار", "upgrade" to "ارتقا", "honors" to "افتخارات",
         "finance" to "مالی", "news" to "اخبار", "settings" to "تنظیمات"
     )
+    val activeAccent = when (activeTab) {
+        "home" -> Color(0xFF35D39A)
+        "squad" -> Color(0xFF71D6A2)
+        "fixtures" -> Color(0xFFFF9B68)
+        "table" -> Color(0xFF68B9FF)
+        "tactics" -> Color(0xFFB69AFF)
+        "managers" -> Color(0xFFCE9BFF)
+        "market" -> Color(0xFF52D7D0)
+        "upgrade" -> Color(0xFFFFD166)
+        "honors" -> Color(0xFFE8B85C)
+        "finance" -> Color(0xFF8FD18A)
+        "news" -> Color(0xFF8EC8F5)
+        else -> Color(0xFF9BB0BF)
+    }
     Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(top = 10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
@@ -183,14 +197,14 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
                 if (activeTab == item.first) {
                     Button(
                         onClick = { onTabChange(item.first) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Navy)
-                    ) { Text(item.second) }
+                        colors = ButtonDefaults.buttonColors(containerColor = activeAccent, contentColor = Navy)
+                    ) { Text(item.second, fontWeight = FontWeight.Bold) }
                 } else {
                     OutlinedButton(onClick = { onTabChange(item.first) }) { Text(item.second, color = Muted) }
                 }
             }
         }
-        Divider(color = PanelLight)
+        Divider(color = activeAccent.copy(alpha = 0.65f), thickness = 1.dp)
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
         when (activeTab) {
             "home" -> HomeScreen(save)
