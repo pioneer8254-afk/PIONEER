@@ -484,56 +484,145 @@ private fun PlayerRosterCard(player: Player, onClick: () -> Unit) {
 
 @Composable
 private fun MarketScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
+    var search by rememberSaveable { mutableStateOf("") }
     var pendingSale by remember { mutableStateOf<Player?>(null) }
+    var pendingPurchase by remember { mutableStateOf<CatalogPlayer?>(null) }
+    var actionError by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
     val daily = EconomyEngine.resetDailyCounters(save.transferCounters, save.gameDay)
-    Column(
+    val ownedIds = remember(save.players) { save.players.mapTo(mutableSetOf()) { it.id } }
+    val candidates = remember(context, save.clubId, ownedIds, search) {
+        PlayerCatalog.allPlayers(context)
+            .filter { it.clubId != save.clubId && it.player.id !in ownedIds }
+            .filter {
+                search.isBlank() ||
+                    it.player.name.contains(search.trim(), ignoreCase = true) ||
+                    it.player.position.contains(search.trim(), ignoreCase = true) ||
+                    (ClubCatalog.find(it.clubId)?.name?.contains(search.trim(), ignoreCase = true) == true)
+            }
+            .sortedWith(compareByDescending<CatalogPlayer> { it.player.overall }.thenBy { it.player.name })
+    }
+    LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
-        Text("بازار نقل‌وانتقالات", color = White, fontSize = 22.sp, fontWeight = FontWeight.Black)
-        Text("خرید، فروش و مدیریت بودجه باشگاه", color = Muted, fontSize = 11.sp)
-        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF10313A)), shape = RoundedCornerShape(18.dp)) {
-            Column(modifier = Modifier.fillMaxWidth().padding(15.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text("بودجه نقل‌وانتقالات", color = Color(0xFFB8D7D0), fontSize = 11.sp)
-                Text("€" + "%,d".format(save.budget), color = Color(0xFF75E7C0), fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("معاوضه امروز: ${daily.swaps} / 3", color = White, fontSize = 10.sp)
-                    Text("خرید امروز: ${daily.purchases} / 3", color = White, fontSize = 10.sp)
+        item {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxWidth()) {
+                Text("بازار نقل‌وانتقالات", color = White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                Text("خرید از باشگاه‌های دیگر و فروش بازیکنان خودت", color = Muted, fontSize = 11.sp)
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF10313A)), shape = RoundedCornerShape(18.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(15.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text("بودجه نقل‌وانتقالات", color = Color(0xFFB8D7D0), fontSize = 11.sp)
+                        Text("€" + "%,d".format(save.budget), color = Color(0xFF75E7C0), fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("معاوضه امروز: ${daily.swaps} / 3", color = White, fontSize = 10.sp)
+                            Text("خرید امروز: ${daily.purchases} / 3", color = White, fontSize = 10.sp)
+                        }
+                        Text("ظرفیت ترکیب: ${save.players.size} / ${TransferEngine.MAX_SQUAD_SIZE}", color = Muted, fontSize = 10.sp)
+                    }
                 }
+                Text("خرید بازیکن", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                OutlinedTextField(
+                    value = search,
+                    onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("جست‌وجوی بازیکن، پست یا باشگاه") }
+                )
+                Text("بازیکنان باشگاه‌های دیگر • مرتب‌شده بر اساس OVR", color = Muted, fontSize = 10.sp)
             }
         }
-        Text("فهرست بازیکنان باشگاه", color = White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        if (save.players.isEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
-                Column(modifier = Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("بازار خرید در انتظار بانک بازیکنان معتبر است", color = White, fontWeight = FontWeight.Bold)
-                    Text("در حال حاضر فهرست قابل‌تأییدی از بازیکنان قابل خرید به پروژه متصل نیست. به همین دلیل گزینه خرید بازیکن ساختگی یا قیمت غیرواقعی ارائه نمی‌شود.", color = Muted, fontSize = 12.sp, lineHeight = 19.sp)
-                }
+        if (candidates.isEmpty()) {
+            item {
+                Text(
+                    if (search.isBlank()) "بازیکن قابل خریدی در کاتالوگ باقی نمانده است." else "نتیجه‌ای برای جست‌وجو پیدا نشد.",
+                    color = Muted, modifier = Modifier.fillMaxWidth().padding(12.dp)
+                )
             }
         } else {
-            Text("برای فروش بازیکن، گزینه فروش را انتخاب کن. حداقل 11 بازیکن در ترکیب حفظ می‌شود.", color = Muted, fontSize = 11.sp)
-            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(save.players, key = { it.id }) { player ->
-                    Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(15.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth().padding(11.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column(horizontalAlignment = Alignment.Start) {
-                                Text("€" + "%,d".format(EconomyEngine.playerMarketValue(player)), color = Color(0xFF75E7C0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Button(
-                                    onClick = { pendingSale = player },
-                                    enabled = save.players.size > 11,
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9B5360), contentColor = White)
-                                ) { Text("فروش", fontWeight = FontWeight.Bold) }
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(player.name, color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text("${player.position}  •  OVR ${player.overall}", color = Muted, fontSize = 10.sp)
-                            }
+            items(candidates, key = { it.player.id }) { entry ->
+                val player = entry.player
+                val clubName = ClubCatalog.find(entry.clubId)?.name ?: entry.clubId
+                val price = EconomyEngine.playerMarketValue(player)
+                Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(15.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(11.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("€" + "%,d".format(price), color = Color(0xFF75E7C0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Button(
+                                onClick = { pendingPurchase = entry; actionError = null },
+                                enabled = daily.purchases < 3 && save.players.size < TransferEngine.MAX_SQUAD_SIZE && save.budget >= price,
+                                colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Navy)
+                            ) { Text("خرید") }
+                        }
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(player.name, color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("$clubName  •  ${player.position}", color = Muted, fontSize = 10.sp)
+                            Text("OVR ${player.overall}  •  ${player.age} سال  •  ${player.nationality}", color = Muted, fontSize = 10.sp)
                         }
                     }
                 }
             }
         }
+        item {
+            Divider(color = PanelLight, thickness = 1.dp)
+            Text("بازیکنان باشگاه من", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("فروش نامحدود است؛ برای حفظ حداقل ۱۱ بازیکن، فروش در ترکیب کوچک‌تر غیرفعال می‌شود.", color = Muted, fontSize = 10.sp)
+        }
+        items(save.players, key = { "owned-${it.id}" }) { player ->
+            Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(15.dp)) {
+                Row(modifier = Modifier.fillMaxWidth().padding(11.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("€" + "%,d".format(EconomyEngine.playerMarketValue(player)), color = Color(0xFF75E7C0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = { pendingSale = player; actionError = null },
+                            enabled = save.players.size > 11,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9B5360), contentColor = White)
+                        ) { Text("فروش", fontWeight = FontWeight.Bold) }
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(player.name, color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("${player.position}  •  OVR ${player.overall}", color = Muted, fontSize = 10.sp)
+                    }
+                }
+            }
+        }
+    }
+    pendingPurchase?.let { entry ->
+        val player = entry.player
+        AlertDialog(
+            onDismissRequest = { pendingPurchase = null },
+            title = { Text("تأیید خرید بازیکن") },
+            text = {
+                Text("خرید ${player.name} از ${ClubCatalog.find(entry.clubId)?.name ?: entry.clubId} با مبلغ تخمینی €" +
+                    "%,d".format(EconomyEngine.playerMarketValue(player)) + "؟")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    runCatching {
+                        val result = TransferEngine.buyPlayer(save.players, player, save.budget, daily)
+                        onSaveChange(save.copy(
+                            players = result.squad,
+                            budget = result.budget,
+                            transferCounters = result.counters,
+                            financeLedger = save.financeLedger + result.financeEntry
+                        ))
+                    }.onFailure { error ->
+                        actionError = when (error.message) {
+                            "Squad capacity reached." -> "ظرفیت ترکیب تکمیل شده است."
+                            "Daily purchase limit reached." -> "سقف سه خرید روزانه تکمیل شده است."
+                            "Insufficient budget." -> "بودجه برای این خرید کافی نیست."
+                            else -> "خرید انجام نشد: ${error.message ?: "خطای نامشخص"}"
+                        }
+                    }
+                    pendingPurchase = null
+                }) { Text("تأیید خرید") }
+            },
+            dismissButton = { TextButton(onClick = { pendingPurchase = null }) { Text("انصراف") } }
+        )
     }
     pendingSale?.let { player ->
         AlertDialog(
@@ -551,15 +640,22 @@ private fun MarketScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
                             transferCounters = result.counters,
                             financeLedger = save.financeLedger + result.financeEntry
                         ))
-                    }
+                    }.onFailure { error -> actionError = "فروش انجام نشد: ${error.message ?: "خطای نامشخص"}" }
                     pendingSale = null
                 }) { Text("تأیید فروش") }
             },
             dismissButton = { TextButton(onClick = { pendingSale = null }) { Text("انصراف") } }
         )
     }
+    actionError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { actionError = null },
+            title = { Text("عملیات نقل‌وانتقال") },
+            text = { Text(message) },
+            confirmButton = { TextButton(onClick = { actionError = null }) { Text("متوجه شدم") } }
+        )
+    }
 }
-
 @Composable
 private fun UpgradeScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
     var selectedPlayerId by rememberSaveable { mutableStateOf(save.players.firstOrNull()?.id ?: "") }
