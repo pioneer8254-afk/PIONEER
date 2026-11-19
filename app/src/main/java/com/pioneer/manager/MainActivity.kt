@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -92,7 +93,10 @@ fun PioneerApp() {
                         save = save!!,
                         activeTab = activeTab,
                         onTabChange = { activeTab = it },
-                        onRename = { newName -> save = GameStore.renameClub(context, save!!, newName) }
+                        onSaveChange = { updated ->
+                            GameStore.save(context, updated)
+                            save = updated
+                        }
                     )
                 }
             }
@@ -144,10 +148,10 @@ private fun ClubPicker(onSelect: (Club) -> Unit) {
 }
 
 @Composable
-private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (String) -> Unit, onRename: (String) -> Unit) {
+private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (String) -> Unit, onSaveChange: (GameSave) -> Unit) {
     val tabs = listOf(
         "home" to "خانه", "squad" to "ترکیب", "fixtures" to "مسابقات", "table" to "جدول",
-        "market" to "بازار", "upgrade" to "ارتقا", "honors" to "افتخارات",
+        "tactics" to "تاکتیک", "market" to "بازار", "upgrade" to "ارتقا", "honors" to "افتخارات",
         "finance" to "مالی", "news" to "اخبار", "settings" to "تنظیمات"
     )
     Column(modifier = Modifier.fillMaxSize().padding(top = 18.dp)) {
@@ -185,12 +189,15 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
             "squad" -> InfoScreen("ترکیب تیم", "بانک بازیکنان واقعی فصل 2026/27 و کارت‌های شش‌ضلعی در گام بعدی متصل می‌شود.")
             "fixtures" -> InfoScreen("تقویم مسابقات", "تقویم لیگ و مسابقات جام حذفی در مرحله بعد پیاده‌سازی می‌شود.")
             "table" -> InfoScreen("جدول لیگ", "جدول با برد، مساوی، باخت، گل زده، گل خورده و امتیاز در مرحله بعد فعال می‌شود.")
+            "tactics" -> TacticsScreen(save, onSaveChange)
             "market" -> InfoScreen("نقل‌وانتقالات", "بازار خرید، فروش و معاوضه با سقف‌های روزانه طبق قوانین بازی در دست ساخت است.")
             "upgrade" -> InfoScreen("ارتقای بازیکنان", "سیستم امتیاز ارتقا و انتخاب ویژگی اختصاصی یا خودکار در مرحله بعد اضافه می‌شود.")
             "honors" -> InfoScreen("افتخارات", "جام‌ها و جوایز پایان فصل در این بخش ثبت خواهند شد.")
             "finance" -> InfoScreen("امور مالی", "درآمد مسابقه، اسپانسر، خرید و فروش و حقوق مربی در این بخش ثبت می‌شود.")
             "news" -> InfoScreen("اخبار باشگاه", "رویدادهای مهم باشگاه و اعلان‌ها در این بخش نمایش داده می‌شوند.")
-            "settings" -> SettingsScreen(save, onRename)
+            "settings" -> SettingsScreen(save) { newName ->
+                onSaveChange(save.copy(clubName = newName.trim()))
+            }
             else -> HomeScreen(save)
         }
     }
@@ -282,5 +289,87 @@ private fun SettingsScreen(save: GameSave, onRename: (String) -> Unit) {
         ) { Text("ذخیره نام") }
         Spacer(Modifier.height(18.dp))
         Text("ذخیره بازی به‌صورت خودکار انجام می‌شود.", color = Muted, fontSize = 13.sp)
+    }
+}
+
+
+@Composable
+private fun TacticsScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
+    val formations = listOf("4-3-3", "4-2-3-1", "4-4-2", "3-5-2", "3-4-3", "5-3-2", "4-1-4-1")
+    val styles = listOf(
+        "Balanced" to "متعادل",
+        "Possession" to "مالکانه",
+        "Counter" to "ضدحمله",
+        "High Press" to "پرس شدید",
+        "Defensive" to "دفاعی"
+    )
+    val tactics = save.tactics
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("تاکتیک و آرایش تیم", color = Mint, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Text("انتخاب آرایش", color = Muted, fontSize = 13.sp)
+        formations.chunked(3).forEach { group ->
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                group.forEach { formation ->
+                    if (save.formation == formation) {
+                        Button(
+                            onClick = { onSaveChange(save.copy(formation = formation)) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Navy)
+                        ) { Text(formation) }
+                    } else {
+                        OutlinedButton(onClick = { onSaveChange(save.copy(formation = formation)) }) {
+                            Text(formation, color = Muted)
+                        }
+                    }
+                }
+            }
+        }
+        Divider(color = PanelLight)
+        Text("سبک بازی", color = Muted, fontSize = 13.sp)
+        styles.forEach { (style, label) ->
+            if (tactics.style == style) {
+                Button(
+                    onClick = { onSaveChange(save.copy(tactics = tactics.copy(style = style))) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Navy)
+                ) { Text(label) }
+            } else {
+                OutlinedButton(
+                    onClick = { onSaveChange(save.copy(tactics = tactics.copy(style = style))) },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(label, color = White) }
+            }
+        }
+        TacticSlider("شدت پرس", tactics.pressing) {
+            onSaveChange(save.copy(tactics = tactics.copy(pressing = it)))
+        }
+        TacticSlider("ارتفاع خط دفاع", tactics.defensiveLine) {
+            onSaveChange(save.copy(tactics = tactics.copy(defensiveLine = it)))
+        }
+        TacticSlider("سرعت بازی", tactics.tempo) {
+            onSaveChange(save.copy(tactics = tactics.copy(tempo = it)))
+        }
+        TacticSlider("عرض بازی", tactics.width) {
+            onSaveChange(save.copy(tactics = tactics.copy(width = it)))
+        }
+        Text("تغییرات تاکتیکی به‌صورت خودکار ذخیره می‌شوند.", color = Mint, fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun TacticSlider(title: String, value: Int, onValueChange: (Int) -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(value.toString(), color = Mint, fontWeight = FontWeight.Bold)
+            Text(title, color = White, fontSize = 14.sp)
+        }
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.toInt()) },
+            valueRange = 0f..100f
+        )
     }
 }
