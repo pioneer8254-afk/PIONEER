@@ -446,7 +446,20 @@ private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
                     Text("سرعت ${player.pace}  |  شوت ${player.shooting}  |  پاس ${player.passing}")
                     Text("دریبل ${player.dribbling}  |  دفاع ${player.defending}  |  قدرت ${player.physical}")
                     Text("ارزش تخمینی: €" + "%,d".format(EconomyEngine.playerMarketValue(player)))
-                    Text("مدت قرارداد: ${player.contractSeasons} فصل")
+                    Text("مدت قرارداد فعلی: ${player.contractSeasons} فصل")
+                    Text("تمدید قرارداد", fontWeight = FontWeight.Bold, color = Mint)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        (1..3).forEach { term ->
+                            OutlinedButton(
+                                onClick = {
+                                    val renewed = ContractEngine.renew(save.players, player.id, term)
+                                    onSaveChange(save.copy(players = renewed))
+                                    selectedPlayer = renewed.first { it.id == player.id }
+                                },
+                                enabled = term != player.contractSeasons
+                            ) { Text("${term} فصل") }
+                        }
+                    }
                 }
             },
             confirmButton = { TextButton(onClick = { selectedPlayer = null }) { Text("بستن") } }
