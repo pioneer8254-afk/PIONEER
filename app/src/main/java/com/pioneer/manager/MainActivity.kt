@@ -533,7 +533,7 @@ private fun ManagerStoreScreen(save: GameSave, onSaveChange: (GameSave) -> Unit)
         AlertDialog(
             onDismissRequest = { pendingManager = null },
             title = { Text("تأیید خرید مربی") },
-            text = { Text("آیا می‌خواهی " + manager.name + " را با قیمت €" + "%,d".format(manager.transferPrice) استخدام کنی؟") },
+            text = { Text("آیا می‌خواهی " + manager.name + " را با قیمت €" + "%,d".format(manager.transferPrice) + " استخدام کنی؟") },
             confirmButton = {
                 TextButton(onClick = {
                     if (save.budget >= manager.transferPrice) {
