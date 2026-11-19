@@ -3,26 +3,26 @@ package com.pioneer.manager
 object ClubCatalog {
     // Official Premier League membership for the 2026/27 season.
     val premierLeague = listOf(
-        Club("bournemouth", "AFC Bournemouth", Division.PREMIER_LEAGUE, 42),
-        Club("arsenal", "Arsenal", Division.PREMIER_LEAGUE, 115),
-        Club("aston-villa", "Aston Villa", Division.PREMIER_LEAGUE, 72),
-        Club("brentford", "Brentford", Division.PREMIER_LEAGUE, 48),
-        Club("brighton", "Brighton & Hove Albion", Division.PREMIER_LEAGUE, 58),
-        Club("chelsea", "Chelsea", Division.PREMIER_LEAGUE, 105),
-        Club("coventry", "Coventry City", Division.PREMIER_LEAGUE, 25),
-        Club("crystal-palace", "Crystal Palace", Division.PREMIER_LEAGUE, 50),
-        Club("everton", "Everton", Division.PREMIER_LEAGUE, 48),
-        Club("fulham", "Fulham", Division.PREMIER_LEAGUE, 45),
-        Club("hull", "Hull City", Division.PREMIER_LEAGUE, 22),
-        Club("ipswich", "Ipswich Town", Division.PREMIER_LEAGUE, 24),
-        Club("leeds", "Leeds United", Division.PREMIER_LEAGUE, 40),
-        Club("liverpool", "Liverpool", Division.PREMIER_LEAGUE, 125),
-        Club("man-city", "Manchester City", Division.PREMIER_LEAGUE, 135),
-        Club("man-utd", "Manchester United", Division.PREMIER_LEAGUE, 100),
-        Club("newcastle", "Newcastle United", Division.PREMIER_LEAGUE, 85),
-        Club("nottingham-forest", "Nottingham Forest", Division.PREMIER_LEAGUE, 52),
-        Club("sunderland", "Sunderland", Division.PREMIER_LEAGUE, 28),
-        Club("tottenham", "Tottenham Hotspur", Division.PREMIER_LEAGUE, 82)
+        Club("bournemouth", "AFC Bournemouth", Division.PREMIER_LEAGUE, 42, "Marco Rose"),
+        Club("arsenal", "Arsenal", Division.PREMIER_LEAGUE, 115, "Mikel Arteta"),
+        Club("aston-villa", "Aston Villa", Division.PREMIER_LEAGUE, 72, "Unai Emery"),
+        Club("brentford", "Brentford", Division.PREMIER_LEAGUE, 48, "Keith Andrews"),
+        Club("brighton", "Brighton & Hove Albion", Division.PREMIER_LEAGUE, 58, "Fabian Hürzeler"),
+        Club("chelsea", "Chelsea", Division.PREMIER_LEAGUE, 105, "Xabi Alonso"),
+        Club("coventry", "Coventry City", Division.PREMIER_LEAGUE, 25, "Frank Lampard"),
+        Club("crystal-palace", "Crystal Palace", Division.PREMIER_LEAGUE, 50, "Pierre Sage"),
+        Club("everton", "Everton", Division.PREMIER_LEAGUE, 48, "David Moyes"),
+        Club("fulham", "Fulham", Division.PREMIER_LEAGUE, 45, "Álvaro Arbeloa"),
+        Club("hull", "Hull City", Division.PREMIER_LEAGUE, 22, "Sergej Jakirović"),
+        Club("ipswich", "Ipswich Town", Division.PREMIER_LEAGUE, 24, "Gary O'Neil"),
+        Club("leeds", "Leeds United", Division.PREMIER_LEAGUE, 40, "Daniel Farke"),
+        Club("liverpool", "Liverpool", Division.PREMIER_LEAGUE, 125, "Andoni Iraola"),
+        Club("man-city", "Manchester City", Division.PREMIER_LEAGUE, 135, "Enzo Maresca"),
+        Club("man-utd", "Manchester United", Division.PREMIER_LEAGUE, 100, "Michael Carrick"),
+        Club("newcastle", "Newcastle United", Division.PREMIER_LEAGUE, 85, "Matthias Jaissle"),
+        Club("nottingham-forest", "Nottingham Forest", Division.PREMIER_LEAGUE, 52, "Oliver Glasner"),
+        Club("sunderland", "Sunderland", Division.PREMIER_LEAGUE, 28, "Régis Le Bris"),
+        Club("tottenham", "Tottenham Hotspur", Division.PREMIER_LEAGUE, 82, "Roberto De Zerbi")
     )
 
     val championship = makeDivision(
