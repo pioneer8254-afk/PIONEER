@@ -457,10 +457,10 @@ private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(9.dp)
                 ) {
                     Text("چیدمان زمین • ${save.formation}", color = Mint, fontSize = 13.sp, fontWeight = FontWeight.Black)
-                    HexLineupRow(goalkeepers, "دروازه‌بان", onPlayerClick = { selectedPlayer = it })
                     HexLineupRow(forwards, "مهاجم", onPlayerClick = { selectedPlayer = it })
                     HexLineupRow(midfielders, "هافبک", onPlayerClick = { selectedPlayer = it })
                     HexLineupRow(defenders, "مدافع", onPlayerClick = { selectedPlayer = it })
+                    HexLineupRow(goalkeepers, "دروازه‌بان", onPlayerClick = { selectedPlayer = it })
                     Text(
                         if (selected.isEmpty()) "برای نمایش بازیکنان، ترکیب اصلی را انتخاب کن"
                         else "برای دیدن اطلاعات بازیکن، کارت شش‌ضلعی را لمس کن",
