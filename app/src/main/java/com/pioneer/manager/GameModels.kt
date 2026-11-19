@@ -46,7 +46,15 @@ data class MatchResult(
     val awayGoals: Int,
     val homePossession: Int,
     val homeShots: Int,
-    val awayShots: Int
+    val awayShots: Int,
+    val homeShotsOnTarget: Int = 0,
+    val awayShotsOnTarget: Int = 0,
+    val homeSuccessfulPasses: Int = 0,
+    val awaySuccessfulPasses: Int = 0,
+    val homeCorners: Int = 0,
+    val awayCorners: Int = 0,
+    val homeFouls: Int = 0,
+    val awayFouls: Int = 0
 )
 
 data class GameSave(
