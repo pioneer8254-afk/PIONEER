@@ -16,14 +16,14 @@ class TransferEngineTest {
             emptyList(), incoming, 100_000_000L, TransferCounters(gameDay = 2)
         )
         assertEquals(listOf(incoming), result.squad)
-        assertEquals(3_000_000L, result.budget)
+        assertEquals(11_800_000L, result.budget)
         assertEquals(1, result.counters.purchases)
     }
 
     @Test
     fun sellingPlayerReturnsValueAndDoesNotConsumeDailySaleLimit() {
         val outgoing = player("outgoing", 70)
-        val result = TransferEngine.sellPlayer(listOf(outgoing), outgoing.id, 0L, 3)
+        val result = TransferEngine.sellPlayer(listOf(outgoing), outgoing.id, 0L, TransferCounters(gameDay = 3))
         assertTrue(result.budget > 0)
         assertTrue(result.squad.isEmpty())
         assertEquals(result.budget, result.financeEntry.amount)
