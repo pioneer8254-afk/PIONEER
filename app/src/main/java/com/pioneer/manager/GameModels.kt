@@ -54,6 +54,8 @@ data class GameSave(
     val clubName: String,
     val budget: Long,
     val managerName: String = "To be confirmed",
+    val managerSalary: Long = 1_500_000L,
+    val managerLastPaidGameDay: Int = 1,
     val season: Int = 1,
     val gameDay: Int = 1,
     val lastTickEpochMillis: Long = System.currentTimeMillis(),
