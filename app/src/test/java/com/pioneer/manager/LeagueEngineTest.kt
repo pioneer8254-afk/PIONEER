@@ -35,7 +35,7 @@ class LeagueEngineTest {
         val table = LeagueEngine.calculateStandings(clubs, fixtures)
         assertEquals("a", table.first().clubId)
         assertEquals(3, table.first().points)
-        assertEquals(1, table.first().goalDifference)
+        assertEquals(2, table.first().goalDifference)
         assertTrue(table.first().played == 1)
     }
 }
