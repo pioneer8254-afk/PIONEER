@@ -29,13 +29,12 @@ object LeagueEngine {
         require(clubIds.size >= 2) { "A league needs at least two clubs." }
         require(clubIds.distinct().size == clubIds.size) { "Club IDs must be unique." }
 
-        val ring = clubIds.toMutableList()
-        if (ring.size % 2 != 0) ring.add("")
+        var rotation = clubIds.toMutableList()
+        if (rotation.size % 2 != 0) rotation.add("")
 
-        val teamCount = ring.size
+        val teamCount = rotation.size
         val roundsPerLeg = teamCount - 1
         val fixtures = mutableListOf<Fixture>()
-        var rotation = ring.toMutableList()
 
         for (round in 0 until roundsPerLeg) {
             for (pair in 0 until teamCount / 2) {
@@ -51,7 +50,7 @@ object LeagueEngine {
             val moving = rotation.drop(1).toMutableList()
             val last = moving.removeAt(moving.lastIndex)
             moving.add(0, last)
-            rotation = listOf(fixed) + moving
+            rotation = (listOf(fixed) + moving).toMutableList()
         }
 
         val firstLeg = fixtures.toList()
@@ -75,7 +74,7 @@ object LeagueEngine {
             val awayGoals = fixture.awayGoals ?: return@forEach
             val home = table[fixture.homeClubId] ?: return@forEach
             val away = table[fixture.awayClubId] ?: return@forEach
-            val homeUpdated = home.copy(
+            table[fixture.homeClubId] = home.copy(
                 played = home.played + 1,
                 wins = home.wins + if (homeGoals > awayGoals) 1 else 0,
                 draws = home.draws + if (homeGoals == awayGoals) 1 else 0,
@@ -83,7 +82,7 @@ object LeagueEngine {
                 goalsFor = home.goalsFor + homeGoals,
                 goalsAgainst = home.goalsAgainst + awayGoals
             )
-            val awayUpdated = away.copy(
+            table[fixture.awayClubId] = away.copy(
                 played = away.played + 1,
                 wins = away.wins + if (awayGoals > homeGoals) 1 else 0,
                 draws = away.draws + if (awayGoals == homeGoals) 1 else 0,
@@ -91,8 +90,6 @@ object LeagueEngine {
                 goalsFor = away.goalsFor + awayGoals,
                 goalsAgainst = away.goalsAgainst + homeGoals
             )
-            table[fixture.homeClubId] = homeUpdated
-            table[fixture.awayClubId] = awayUpdated
         }
         return table.values.sortedWith(
             compareByDescending<Standing> { it.points }
