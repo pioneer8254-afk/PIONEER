@@ -19,6 +19,10 @@ object PlayerCatalog {
 
     fun clubIdsWithPlayers(context: Context): Set<String> = load(context).keys
 
+    fun allPlayers(context: Context): List<CatalogPlayer> = load(context).flatMap { (clubId, players) ->
+        players.map { player -> CatalogPlayer(clubId, player) }
+    }
+
     @Synchronized
     private fun load(context: Context): Map<String, List<Player>> {
         cached?.let { return it }
