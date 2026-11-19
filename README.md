@@ -10,6 +10,8 @@ PIONEER is a Persian-language Android football club management game.
 - One persistent active save, stored locally on the device.
 - In-game day advances after each 24 hours of real elapsed time.
 - League rules, double round-robin fixture generation, standings, and a first-pass match simulation engine.
+- Persistent starting-XI selection with validation for eleven squad members and exactly one goalkeeper.
+- Match progression engine that records a user-club league result once, applies the existing win/draw/loss economy rules, and writes the financial ledger.
 - Initial transfer, player-contract, manager-salary, promotion/relegation, and FA Cup rule engines.
 - GitHub Actions workflow to build and test a debug APK.
 
@@ -19,6 +21,6 @@ The GitHub Actions workflow builds the app-debug APK on pushes to main and on ma
 
 ## Development status
 
-This is an early implementation milestone, not the completed game. Verified player and manager databases, full match and tactics screens, persistent fixtures and league results, transfers UI, sponsor contracts, detailed finance ledger, FA Cup progression, manager replacement, season awards, and full gameplay integration remain to be implemented and tested.
+This is an early implementation milestone, not the completed game. Verified player and manager databases, opponent squad data, the playable match flow, full lineup-to-match integration, complete transfer market, FA Cup progression, manager replacement, season awards, and full gameplay integration remain to be implemented and tested. The lineup selector and match reward engine are currently groundwork; they do not yet make a match playable.
 
 The English league structure for 2026/27 is 20 clubs in the Premier League and 24 clubs in each of the three EFL divisions. This gives each EFL club 46 league matches.
