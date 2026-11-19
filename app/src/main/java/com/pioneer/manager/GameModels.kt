@@ -74,7 +74,8 @@ data class GameSave(
     val developmentPoints: Int = 0,
     val transferCounters: TransferCounters = TransferCounters(gameDay = 1),
     val financeLedger: List<FinanceEntry> = emptyList(),
-    val sponsorContract: SponsorContract? = null
+    val sponsorContract: SponsorContract? = null,
+    val startingLineupPlayerIds: List<String> = emptyList()
 )
 
 object LeagueRules {
