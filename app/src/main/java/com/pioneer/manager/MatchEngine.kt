@@ -23,12 +23,22 @@ object MatchEngine {
         val awayExpected = (1.05 + (awayPower - homePower) / 38.0).coerceIn(0.2, 2.8)
         val possession = (50 + (homePower - awayPower) * 0.55 +
             (homeTactics.tempo - awayTactics.tempo) * 0.08).roundToInt().coerceIn(25, 75)
+        val homeShots = (5 + random.nextInt(0, 8)).coerceAtMost(25)
+        val awayShots = (5 + random.nextInt(0, 8)).coerceAtMost(25)
         return MatchResult(
             homeGoals = poissonLike(homeExpected, random),
             awayGoals = poissonLike(awayExpected, random),
             homePossession = possession,
-            homeShots = (5 + random.nextInt(0, 8)).coerceAtMost(25),
-            awayShots = (5 + random.nextInt(0, 8)).coerceAtMost(25)
+            homeShots = homeShots,
+            awayShots = awayShots,
+            homeShotsOnTarget = random.nextInt(0, homeShots + 1),
+            awayShotsOnTarget = random.nextInt(0, awayShots + 1),
+            homeSuccessfulPasses = (220 + possession * 4 + random.nextInt(0, 90)).coerceAtMost(950),
+            awaySuccessfulPasses = (220 + (100 - possession) * 4 + random.nextInt(0, 90)).coerceAtMost(950),
+            homeCorners = random.nextInt(1, 9),
+            awayCorners = random.nextInt(1, 9),
+            homeFouls = random.nextInt(4, 17),
+            awayFouls = random.nextInt(4, 17)
         )
     }
 
