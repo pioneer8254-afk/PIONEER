@@ -25,6 +25,7 @@ object GameStore {
             clubId = club.id,
             clubName = club.name,
             budget = club.initialBudgetMillions * 1_000_000L,
+            managerName = club.initialManagerName,
             lastTickEpochMillis = System.currentTimeMillis(),
             fixtures = LeagueEngine.generateDoubleRoundRobin(
                 ClubCatalog.premierLeague.map { it.id }
