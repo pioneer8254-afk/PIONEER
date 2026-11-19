@@ -69,4 +69,38 @@ class MatchProgressionEngineTest {
         assertFalse(twice.isSuccess)
         assertEquals(1, once.financeLedger.size)
     }
+    @Test
+    fun completingUserFixtureAlsoRecordsOtherMatchesInSameMatchday() {
+        val base = save().copy(
+            fixtures = listOf(
+                Fixture("fixture-1", "user", "opponent", 1),
+                Fixture("ai-1", "club-a", "club-b", 1),
+                Fixture("later", "user", "opponent-2", 2)
+            )
+        )
+        val updated = MatchProgressionEngine.completeLeagueFixture(
+            base, "fixture-1", MatchResult(2, 1, 54, 9, 5), 70,
+            mapOf("club-a" to 75, "club-b" to 60)
+        )
+        assertTrue(updated.fixtures.first { it.id == "fixture-1" }.played)
+        assertTrue(updated.fixtures.first { it.id == "ai-1" }.played)
+        assertFalse(updated.fixtures.first { it.id == "later" }.played)
+    }
+
+    @Test
+    fun cannotCompleteLaterMatchdayBeforeEarlierUserFixture() {
+        val base = save().copy(
+            fixtures = listOf(
+                Fixture("earlier", "user", "opponent", 1),
+                Fixture("later", "user", "opponent-2", 2)
+            )
+        )
+        val result = runCatching {
+            MatchProgressionEngine.completeLeagueFixture(
+                base, "later", MatchResult(1, 0, 50, 5, 2), 70
+            )
+        }
+        assertTrue(result.isFailure)
+    }
+
 }
