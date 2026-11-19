@@ -156,8 +156,9 @@ private fun ClubPicker(onSelect: (Club) -> Unit) {
 
 @Composable
 private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (String) -> Unit, onSaveChange: (GameSave) -> Unit) {
+    var selectedFixtureId by rememberSaveable { mutableStateOf<String?>(null) }
     val tabs = listOf(
-        "home" to "خانه", "squad" to "ترکیب", "fixtures" to "مسابقات", "table" to "جدول",
+        "home" to "خانه", "squad" to "ترکیب", "fixtures" to "مسابقات", "match" to "مرکز مسابقه", "table" to "جدول",
         "tactics" to "تاکتیک", "managers" to "مربیان", "market" to "بازار", "upgrade" to "ارتقا", "honors" to "افتخارات",
         "finance" to "مالی", "news" to "اخبار", "settings" to "تنظیمات"
     )
@@ -165,6 +166,7 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
         "home" -> Color(0xFF35D39A)
         "squad" -> Color(0xFF71D6A2)
         "fixtures" -> Color(0xFFFF9B68)
+        "match" -> Color(0xFFFFC36B)
         "table" -> Color(0xFF68B9FF)
         "tactics" -> Color(0xFFB69AFF)
         "managers" -> Color(0xFFCE9BFF)
@@ -209,7 +211,11 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
         when (activeTab) {
             "home" -> HomeScreen(save)
             "squad" -> SquadScreen(save, onSaveChange)
-            "fixtures" -> FixturesScreen(save)
+            "fixtures" -> FixturesScreen(save, onPrepareMatch = { fixtureId ->
+                selectedFixtureId = fixtureId
+                onTabChange("match")
+            })
+            "match" -> MatchCenterScreen(save, selectedFixtureId)
             "table" -> LeagueTableScreen(save)
             "tactics" -> TacticsScreen(save, onSaveChange)
             "managers" -> ManagerStoreScreen(save, onSaveChange)
@@ -778,7 +784,7 @@ private fun TacticSlider(title: String, value: Int, onValueChange: (Int) -> Unit
 
 
 @Composable
-private fun FixturesScreen(save: GameSave) {
+private fun FixturesScreen(save: GameSave, onPrepareMatch: (String) -> Unit) {
     val clubFixtures = save.fixtures
         .filter { it.homeClubId == save.clubId || it.awayClubId == save.clubId }
         .sortedBy { it.matchday }
@@ -807,9 +813,74 @@ private fun FixturesScreen(save: GameSave) {
                             Text(if (isHome) "میزبان • " + opponent else "میهمان • " + opponent, color = White, fontWeight = FontWeight.Bold)
                         }
                     }
+                    if (!fixture.played) {
+                        Button(
+                            onClick = { onPrepareMatch(fixture.id) },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB45C), contentColor = Navy)
+                        ) { Text("آماده‌سازی مسابقه") }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MatchCenterScreen(save: GameSave, fixtureId: String?) {
+    val fixture = save.fixtures.firstOrNull { it.id == fixtureId }
+    val isHome = fixture?.homeClubId == save.clubId
+    val opponentId = fixture?.let { if (isHome) it.awayClubId else it.homeClubId }
+    val opponentName = opponentId?.let { ClubCatalog.find(it)?.name ?: it } ?: "نامشخص"
+    val lineup = StartingLineupEngine.validateFormation(save, save.formation)
+    val salaryDue = EconomyEngine.managerSalaryDue(save.gameDay, save.managerLastPaidGameDay)
+    val blockers = buildList {
+        if (fixture == null) add("مسابقه‌ای از تقویم انتخاب نشده است.")
+        if (fixture != null && fixture.played) add("این مسابقه قبلاً انجام شده است.")
+        if (fixture != null && fixture.competition != "LEAGUE") add("فعلاً فقط مسابقات لیگ به موتور مسابقه متصل‌اند.")
+        if (save.players.isEmpty()) add("فهرست بازیکنان باشگاه هنوز وارد نشده است.")
+        if (!lineup.isValid) addAll(lineup.errors)
+        if (salaryDue) add("حقوق سرمربی سررسید شده؛ ابتدا آن را پرداخت کنید.")
+        if (opponentId != null) add("فهرست معتبر ۱۱ بازیکن حریف هنوز در داده‌های بازی موجود نیست.")
+    }
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("مرکز مسابقه", color = Color(0xFFFFB45C), fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("مسابقه انتخاب‌شده", color = Muted, fontSize = 11.sp)
+                Text(opponentName, color = White, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                Text(
+                    if (fixture == null) "از تقویم یک مسابقه انتخاب کنید"
+                    else (if (isHome) "خانگی" else "خارج از خانه") + " • هفته ${fixture.matchday}",
+                    color = Muted, fontSize = 12.sp
+                )
+                Text("آرایش: ${save.formation}  •  بازیکنان باشگاه: ${save.players.size}/35", color = Mint, fontSize = 12.sp)
+            }
+        }
+        Text("بررسی پیش از شروع", color = White, fontWeight = FontWeight.Bold)
+        if (blockers.isEmpty()) {
+            Text("همه شرایط شروع مسابقه برقرار است.", color = Mint)
+        } else {
+            blockers.distinct().forEach { reason ->
+                Card(colors = CardDefaults.cardColors(containerColor = PanelLight), shape = RoundedCornerShape(12.dp)) {
+                    Text("•  $reason", color = Color(0xFFFFC36B), modifier = Modifier.fillMaxWidth().padding(12.dp), fontSize = 13.sp)
+                }
+            }
+        }
+        Button(
+            onClick = {},
+            enabled = false,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(disabledContainerColor = PanelLight, disabledContentColor = Muted)
+        ) { Text("شروع مسابقه — پس از تکمیل داده‌های واقعی") }
+        Text(
+            "برای جلوگیری از نتیجه‌سازی با بازیکنان فرضی، شروع مسابقه تا زمان ورود ترکیب واقعی هر دو تیم غیرفعال است.",
+            color = Muted, fontSize = 11.sp
+        )
     }
 }
 
