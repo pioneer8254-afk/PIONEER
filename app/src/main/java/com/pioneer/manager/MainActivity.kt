@@ -157,7 +157,7 @@ private fun ClubPicker(onSelect: (Club) -> Unit) {
 
 @Composable
 private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (String) -> Unit, onSaveChange: (GameSave) -> Unit) {
-    var selectedFixtureId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedFixtureId by rememberSaveable { mutableStateOf(save.activeMatch?.fixtureId) }
     val tabs = listOf(
         "home" to "خانه", "squad" to "ترکیب", "fixtures" to "مسابقات", "match" to "مرکز مسابقه", "table" to "جدول",
         "tactics" to "تاکتیک", "managers" to "مربیان", "market" to "بازار", "upgrade" to "ارتقا", "honors" to "افتخارات",
@@ -935,8 +935,10 @@ private fun MatchCenterScreen(save: GameSave, fixtureId: String?, onSaveChange: 
     }
     val lineup = StartingLineupEngine.validateFormation(save, save.formation)
     val salaryDue = EconomyEngine.managerSalaryDue(save.gameDay, save.managerLastPaidGameDay)
-    var match by remember(fixtureId) { mutableStateOf<CareerMatch?>(null) }
-    var resultSaved by remember(fixtureId) { mutableStateOf(false) }
+    var match by remember(fixtureId) {
+        mutableStateOf(save.activeMatch?.takeIf { it.fixtureId == fixtureId })
+    }
+    var resultSaved by remember(fixtureId) { mutableStateOf(fixture?.played == true) }
     var startError by remember(fixtureId) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(match?.session?.phase, match?.session?.secondsRemaining) {
@@ -945,7 +947,11 @@ private fun MatchCenterScreen(save: GameSave, fixtureId: String?, onSaveChange: 
             activeMatch.session.phase == MatchPhase.SECOND_HALF
         ) {
             delay(1000)
-            if (match == activeMatch) match = CareerMatchEngine.tick(activeMatch)
+            if (match == activeMatch) {
+                val advanced = CareerMatchEngine.tick(activeMatch)
+                match = advanced
+                onSaveChange(save.copy(activeMatch = advanced))
+            }
         }
     }
 
@@ -953,6 +959,9 @@ private fun MatchCenterScreen(save: GameSave, fixtureId: String?, onSaveChange: 
         if (fixture == null) add("مسابقه‌ای از تقویم انتخاب نشده است.")
         if (fixture != null && fixture.played) add("این مسابقه قبلاً انجام شده است.")
         if (fixture != null && fixture.competition != "LEAGUE") add("فعلاً فقط مسابقات لیگ به موتور مسابقه متصل‌اند.")
+        if (save.activeMatch != null && save.activeMatch.fixtureId != fixtureId) {
+            add("یک مسابقه ناتمام ذخیره شده است؛ ابتدا همان مسابقه را از تقویم باز کنید.")
+        }
         if (save.players.isEmpty()) add("فهرست بازیکنان باشگاه در ذخیره بازی موجود نیست.")
         if (!lineup.isValid) addAll(lineup.errors)
         if (salaryDue) add("حقوق سرمربی سررسید شده؛ ابتدا آن را پرداخت کنید.")
@@ -1009,9 +1018,13 @@ private fun MatchCenterScreen(save: GameSave, fixtureId: String?, onSaveChange: 
             Button(
                 onClick = {
                     startError = null
-                    match = runCatching {
+                    val started = runCatching {
                         CareerMatchEngine.start(save, fixture!!.id, opponentPlayers, salaryDue)
                     }.onFailure { startError = it.message ?: "شروع مسابقه ناموفق بود." }.getOrNull()
+                    if (started != null) {
+                        match = started
+                        onSaveChange(save.copy(activeMatch = started))
+                    }
                 },
                 enabled = blockers.isEmpty(),
                 modifier = Modifier.fillMaxWidth(),
@@ -1046,9 +1059,13 @@ private fun MatchCenterScreen(save: GameSave, fixtureId: String?, onSaveChange: 
                         Text("${session.secondsRemaining} ثانیه تا پایان این نیمه", color = Mint, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                     if (session.phase == MatchPhase.HALF_TIME) {
-                        Text("نتیجه نیمه اول ثبت شد. تاکتیک ذخیره‌شده برای نیمه دوم اعمال می‌شود.", color = Muted, fontSize = 12.sp)
+                        Text("نتیجه نیمه اول ذخیره شده است. تاکتیک فعلی برای نیمه دوم اعمال می‌شود.", color = Muted, fontSize = 12.sp)
                         Button(
-                            onClick = { match = CareerMatchEngine.continueAfterHalfTime(active, save.tactics, isHome) },
+                            onClick = {
+                                val continued = CareerMatchEngine.continueAfterHalfTime(active, save.tactics, isHome)
+                                match = continued
+                                onSaveChange(save.copy(activeMatch = continued))
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Navy)
                         ) { Text("شروع نیمه دوم") }
