@@ -14,7 +14,8 @@ object GameStore {
             ?: return null
         return runCatching {
             val parsed = gson.fromJson(raw, GameSave::class.java)
-            val players = parsed.players.orEmpty()
+            val savedPlayers = parsed.players.orEmpty()
+            val players = if (savedPlayers.isEmpty()) PlayerCatalog.playersForClub(context, parsed.clubId) else savedPlayers
             val validPlayerIds = players.map { it.id }.toSet()
             parsed.copy(
                 tactics = parsed.tactics ?: Tactics(),
@@ -41,6 +42,7 @@ object GameStore {
             clubName = club.name,
             budget = club.initialBudgetMillions * 1_000_000L,
             managerName = club.initialManagerName,
+            players = PlayerCatalog.playersForClub(context, club.id),
             lastTickEpochMillis = System.currentTimeMillis(),
             fixtures = LeagueEngine.generateDoubleRoundRobin(
                 ClubCatalog.premierLeague.map { it.id }
