@@ -81,9 +81,12 @@ object MatchSessionEngine {
             awayShots = first.awayShots + second.awayShots,
             homeShotsOnTarget = first.homeShotsOnTarget + second.homeShotsOnTarget,
             awayShotsOnTarget = first.awayShotsOnTarget + second.awayShotsOnTarget,
-            successfulPasses = first.successfulPasses + second.successfulPasses,
-            corners = first.corners + second.corners,
-            fouls = first.fouls + second.fouls
+            homeSuccessfulPasses = first.homeSuccessfulPasses + second.homeSuccessfulPasses,
+            awaySuccessfulPasses = first.awaySuccessfulPasses + second.awaySuccessfulPasses,
+            homeCorners = first.homeCorners + second.homeCorners,
+            awayCorners = first.awayCorners + second.awayCorners,
+            homeFouls = first.homeFouls + second.homeFouls,
+            awayFouls = first.awayFouls + second.awayFouls
         )
     }
 }
