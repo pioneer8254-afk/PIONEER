@@ -366,7 +366,7 @@ private fun StatCard(
 @Composable
 private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
-    val lineup = StartingLineupEngine.validate(save)
+    val lineup = StartingLineupEngine.validateFormation(save, save.formation)
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalAlignment = Alignment.End,
@@ -420,8 +420,8 @@ private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
                     Text("ترکیب اصلی مسابقه", color = White, fontWeight = FontWeight.Bold)
                 }
                 Text(
-                    if (lineup.isValid) "ترکیب معتبر است؛ یک دروازه‌بان و ۱۰ بازیکن دیگر انتخاب شده‌اند."
-                    else "برای معتبر شدن ترکیب، دقیقاً ۱۱ بازیکن و یک دروازه‌بان انتخاب کنید.",
+                    if (lineup.isValid) "ترکیب ${save.formation} معتبر است و آماده ثبت برای مسابقه است."
+                    else "ترکیب با آرایش ${save.formation} هماهنگ نیست؛ تعداد بازیکنان هر خط و حضور یک دروازه‌بان را بررسی کنید.",
                     color = if (lineup.isValid) Mint else Color(0xFFFFC56B), fontSize = 11.sp
                 )
             }
