@@ -215,54 +215,136 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
 
 @Composable
 private fun HomeScreen(save: GameSave) {
+    val clubFixtures = save.fixtures
+        .filter { it.homeClubId == save.clubId || it.awayClubId == save.clubId }
+        .sortedBy { it.matchday }
+    val played = clubFixtures.filter { it.played }
+    val upcoming = clubFixtures.firstOrNull { !it.played }
+    val wins = played.count { fixture ->
+        val home = fixture.homeClubId == save.clubId
+        val scored = if (home) fixture.result?.homeGoals else fixture.result?.awayGoals
+        val conceded = if (home) fixture.result?.awayGoals else fixture.result?.homeGoals
+        scored != null && conceded != null && scored > conceded
+    }
+    val opponentId = upcoming?.let {
+        if (it.homeClubId == save.clubId) it.awayClubId else it.homeClubId
+    }
+    val opponentName = opponentId?.let { ClubCatalog.find(it)?.name } ?: "نامشخص"
+
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = Panel),
-            shape = RoundedCornerShape(22.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF102B31)),
+            shape = RoundedCornerShape(24.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.End) {
-                Text("باشگاه من", color = Muted, fontSize = 13.sp)
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("PIONEER  /  CLUB PROFILE", color = Color(0xFF75E7C0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("●  ACTIVE CLUB", color = Color(0xFF75E7C0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
                 Text(save.clubName, color = White, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                Text("Premier League  •  2026/27", color = Mint, fontSize = 12.sp)
-                Spacer(Modifier.height(10.dp))
-                Text("سرمربی: " + save.managerName, color = White, fontSize = 13.sp)
-                Spacer(Modifier.height(18.dp))
-                Text("بودجه باشگاه", color = Muted, fontSize = 12.sp)
-                Text("€" + "%,d".format(save.budget), color = Mint, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text("مدیریت باشگاه  •  فصل ${save.season}", color = Color(0xFFB8D7D0), fontSize = 12.sp)
+                Divider(color = Color(0xFF31564F))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                    Column(horizontalAlignment = Alignment.Start) {
+                        Text("موجودی قابل استفاده", color = Color(0xFFB8D7D0), fontSize = 11.sp)
+                        Text("€" + "%,d".format(save.budget), color = Color(0xFF75E7C0), fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("سرمربی", color = Color(0xFFB8D7D0), fontSize = 11.sp)
+                        Text(save.managerName, color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard("روز فصل", save.gameDay.toString(), Modifier.weight(1f))
-            StatCard("فصل", save.season.toString(), Modifier.weight(1f))
-            StatCard("بازیکنان", "—", Modifier.weight(1f))
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            StatCard("بازیکنان", save.players.size.toString(), Modifier.weight(1f), Color(0xFF63B3FF))
+            StatCard("مسابقات", played.size.toString() + " / " + clubFixtures.size, Modifier.weight(1f), Color(0xFFFFB45C))
+            StatCard("پیروزی", wins.toString(), Modifier.weight(1f), Color(0xFF75E7C0))
         }
-        Card(colors = CardDefaults.cardColors(containerColor = PanelLight), shape = RoundedCornerShape(18.dp)) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.End) {
-                Text("وضعیت توسعه", color = Mint, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(6.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Panel),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("NEXT FIXTURE", color = Color(0xFFFFB45C), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("مسابقه پیش‌رو", color = White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
+                if (upcoming == null) {
+                    Text("در حال حاضر مسابقه برنامه‌ریزی‌شده‌ای باقی نمانده است.", color = Muted, fontSize = 13.sp)
+                } else {
+                    Text(opponentName, color = White, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        (if (upcoming.homeClubId == save.clubId) "بازی خانگی" else "بازی خارج از خانه") +
+                            "  •  هفته ${upcoming.matchday}",
+                        color = Muted, fontSize = 12.sp
+                    )
+                    Text("وضعیت: در انتظار برگزاری", color = Color(0xFFFFB45C), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = PanelLight),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Text("گزارش مدیریتی", color = Color(0xFFBCA7FF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("وضعیت تیم", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    "ساختار اولیه برنامه و ذخیره خودکار فعال است. اطلاعات کامل بازیکنان، مربیان، لیگ‌های پایین‌تر، تقویم و موتور مسابقه در گام‌های بعدی تکمیل و آزمایش می‌شوند.",
-                    color = White, fontSize = 13.sp, lineHeight = 21.sp
+                    "ترکیب فعلی: ${save.players.size} بازیکن  •  آرایش: ${save.formation}",
+                    color = Muted, fontSize = 12.sp
+                )
+                Text(
+                    "اطلاعات بازیکنان و لوگوهای رسمی باید از منابع معتبر تکمیل شوند؛ تا پیش از تأیید، نشان یا اطلاعات ساختگی نمایش داده نمی‌شود.",
+                    color = White, fontSize = 12.sp, lineHeight = 19.sp
                 )
             }
         }
-        Text("ویژگی‌های پایه", color = White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-        Text("• ذخیره خودکار تک‌باشگاه", color = Muted, fontSize = 13.sp)
-        Text("• گذر روز بازی پس از هر 24 ساعت واقعی", color = Muted, fontSize = 13.sp)
-        Text("• رابط فارسی و نام انگلیسی باشگاه‌ها", color = Muted, fontSize = 13.sp)
+        Text("PIONEER  •  FOOTBALL MANAGEMENT", color = Color(0xFF607887), fontSize = 9.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-private fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.End) {
-            Text(title, color = Muted, fontSize = 11.sp)
-            Text(value, color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+private fun StatCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    accent: Color = Mint
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = Panel),
+        shape = RoundedCornerShape(17.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 13.dp),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text(title, color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            Text(value, color = accent, fontSize = 19.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
 }
@@ -324,7 +406,7 @@ private fun TacticsScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
         Text("تاکتیک و آرایش تیم", color = Mint, fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Text("انتخاب آرایش", color = Muted, fontSize = 13.sp)
         formations.chunked(3).forEach { group ->
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 group.forEach { formation ->
                     if (save.formation == formation) {
                         Button(
@@ -396,7 +478,7 @@ private fun FixturesScreen(save: GameSave) {
         Text("تقویم لیگ", color = Mint, fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Text("38 مسابقه لیگ برتر • بازی‌های انجام‌نشده در تقویم باقی می‌مانند.", color = Muted, fontSize = 12.sp)
         Spacer(Modifier.height(10.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(clubFixtures) { fixture ->
                 val isHome = fixture.homeClubId == save.clubId
                 val opponentId = if (isHome) fixture.awayClubId else fixture.homeClubId
