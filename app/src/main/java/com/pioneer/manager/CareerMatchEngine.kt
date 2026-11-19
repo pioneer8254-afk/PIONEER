@@ -56,7 +56,7 @@ object CareerMatchEngine {
             fixtureId = match.fixtureId,
             result = result,
             opponentOverall = match.opponentOverall
-        )
+        ).copy(activeMatch = null)
     }
 
     fun tick(match: CareerMatch): CareerMatch = match.copy(
