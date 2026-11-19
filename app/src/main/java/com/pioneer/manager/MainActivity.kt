@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
@@ -152,7 +154,7 @@ private fun ClubPicker(onSelect: (Club) -> Unit) {
 private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (String) -> Unit, onSaveChange: (GameSave) -> Unit) {
     val tabs = listOf(
         "home" to "خانه", "squad" to "ترکیب", "fixtures" to "مسابقات", "table" to "جدول",
-        "tactics" to "تاکتیک", "market" to "بازار", "upgrade" to "ارتقا", "honors" to "افتخارات",
+        "tactics" to "تاکتیک", "managers" to "مربیان", "market" to "بازار", "upgrade" to "ارتقا", "honors" to "افتخارات",
         "finance" to "مالی", "news" to "اخبار", "settings" to "تنظیمات"
     )
     Column(modifier = Modifier.fillMaxSize().padding(top = 18.dp)) {
@@ -191,6 +193,7 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
             "fixtures" -> FixturesScreen(save)
             "table" -> LeagueTableScreen(save)
             "tactics" -> TacticsScreen(save, onSaveChange)
+            "managers" -> ManagerStoreScreen(save, onSaveChange)
             "market" -> InfoScreen("نقل‌وانتقالات", "بازار خرید، فروش و معاوضه با سقف‌های روزانه طبق قوانین بازی در دست ساخت است.")
             "upgrade" -> InfoScreen("ارتقای بازیکنان", "سیستم امتیاز ارتقا و انتخاب ویژگی اختصاصی یا خودکار در مرحله بعد اضافه می‌شود.")
             "honors" -> InfoScreen("افتخارات", "جام‌ها و جوایز پایان فصل در این بخش ثبت خواهند شد.")
@@ -456,5 +459,97 @@ private fun LeagueTableScreen(save: GameSave) {
                 }
             }
         }
+    }
+}
+
+
+@Composable
+private fun ManagerStoreScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
+    var pendingManager by remember { mutableStateOf<Manager?>(null) }
+    val salaryDue = EconomyEngine.managerSalaryDue(save.gameDay, save.managerLastPaidGameDay)
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text("مدیریت مربیان", color = Mint, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.End) {
+                Text("سرمربی فعلی", color = Muted, fontSize = 12.sp)
+                Text(save.managerName, color = White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Text("حقوق هر 3 روز: €" + "%,d".format(save.managerSalary), color = Muted, fontSize = 12.sp)
+                Text(
+                    if (salaryDue) "حقوق سررسید شده است" else "روزهای باقی‌مانده تا پرداخت: " + (3 - (save.gameDay - save.managerLastPaidGameDay)),
+                    color = if (salaryDue) Color(0xFFFFB45C) else Mint,
+                    fontSize = 12.sp
+                )
+                if (salaryDue) {
+                    Button(
+                        onClick = {
+                            if (save.budget >= save.managerSalary) {
+                                onSaveChange(save.copy(
+                                    budget = save.budget - save.managerSalary,
+                                    managerLastPaidGameDay = save.gameDay
+                                ))
+                            }
+                        },
+                        enabled = save.budget >= save.managerSalary,
+                        colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Navy)
+                    ) { Text("پرداخت حقوق") }
+                    if (save.budget < save.managerSalary) {
+                        Text("بودجه برای پرداخت حقوق کافی نیست.", color = Color(0xFFFFB45C), fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+        Text("مربیان قابل خرید", color = Mint, fontWeight = FontWeight.Bold)
+        ManagerCatalog.available.forEach { manager ->
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Panel),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(13.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = { pendingManager = manager },
+                        enabled = save.budget >= manager.transferPrice,
+                        colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Navy)
+                    ) { Text("خرید") }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(manager.name, color = White, fontWeight = FontWeight.Bold)
+                        Text("OVR " + manager.overall, color = Mint, fontSize = 12.sp)
+                        Text("قیمت: €" + "%,d".format(manager.transferPrice), color = Muted, fontSize = 11.sp)
+                        Text("حقوق هر 3 روز: €" + "%,d".format(manager.salaryEveryThreeDays), color = Muted, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+    }
+    pendingManager?.let { manager ->
+        AlertDialog(
+            onDismissRequest = { pendingManager = null },
+            title = { Text("تأیید خرید مربی") },
+            text = { Text("آیا می‌خواهی " + manager.name + " را با قیمت €" + "%,d".format(manager.transferPrice) استخدام کنی؟") },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (save.budget >= manager.transferPrice) {
+                        onSaveChange(save.copy(
+                            managerName = manager.name,
+                            managerSalary = manager.salaryEveryThreeDays,
+                            managerLastPaidGameDay = save.gameDay,
+                            budget = ManagerEngine.buy(manager, save.budget)
+                        ))
+                    }
+                    pendingManager = null
+                }) { Text("تأیید") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingManager = null }) { Text("انصراف") }
+            }
+        )
     }
 }
