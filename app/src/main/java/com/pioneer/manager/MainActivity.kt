@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -187,8 +188,8 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
         when (activeTab) {
             "home" -> HomeScreen(save)
             "squad" -> InfoScreen("ترکیب تیم", "بانک بازیکنان واقعی فصل 2026/27 و کارت‌های شش‌ضلعی در گام بعدی متصل می‌شود.")
-            "fixtures" -> InfoScreen("تقویم مسابقات", "تقویم لیگ و مسابقات جام حذفی در مرحله بعد پیاده‌سازی می‌شود.")
-            "table" -> InfoScreen("جدول لیگ", "جدول با برد، مساوی، باخت، گل زده، گل خورده و امتیاز در مرحله بعد فعال می‌شود.")
+            "fixtures" -> FixturesScreen(save)
+            "table" -> LeagueTableScreen(save)
             "tactics" -> TacticsScreen(save, onSaveChange)
             "market" -> InfoScreen("نقل‌وانتقالات", "بازار خرید، فروش و معاوضه با سقف‌های روزانه طبق قوانین بازی در دست ساخت است.")
             "upgrade" -> InfoScreen("ارتقای بازیکنان", "سیستم امتیاز ارتقا و انتخاب ویژگی اختصاصی یا خودکار در مرحله بعد اضافه می‌شود.")
@@ -371,5 +372,87 @@ private fun TacticSlider(title: String, value: Int, onValueChange: (Int) -> Unit
             onValueChange = { onValueChange(it.toInt()) },
             valueRange = 0f..100f
         )
+    }
+}
+
+
+@Composable
+private fun FixturesScreen(save: GameSave) {
+    val clubFixtures = save.fixtures
+        .filter { it.homeClubId == save.clubId || it.awayClubId == save.clubId }
+        .sortedBy { it.matchday }
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.End) {
+        Text("تقویم لیگ", color = Mint, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Text("38 مسابقه لیگ برتر • بازی‌های انجام‌نشده در تقویم باقی می‌مانند.", color = Muted, fontSize = 12.sp)
+        Spacer(Modifier.height(10.dp))
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(clubFixtures) { fixture ->
+                val isHome = fixture.homeClubId == save.clubId
+                val opponentId = if (isHome) fixture.awayClubId else fixture.homeClubId
+                val opponent = ClubCatalog.find(opponentId)?.name ?: opponentId
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Panel),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(13.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(if (fixture.played) "پایان‌یافته" else "در انتظار", color = if (fixture.played) Mint else Muted, fontSize = 11.sp)
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("هفته " + fixture.matchday, color = Mint, fontSize = 11.sp)
+                            Text(if (isHome) "میزبان • " + opponent else "میهمان • " + opponent, color = White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LeagueTableScreen(save: GameSave) {
+    val clubIds = ClubCatalog.premierLeague.map { it.id }
+    val standings = LeagueEngine.calculateStandings(clubIds, save.fixtures)
+    Column(modifier = Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.End) {
+        Text("جدول Premier League", color = Mint, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("امتیازدهی: برد 3 • مساوی 1 • باخت 0", color = Muted, fontSize = 11.sp)
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Column {
+                Row(modifier = Modifier.padding(vertical = 7.dp)) {
+                    listOf("PTS", "GD", "GA", "GF", "L", "D", "W", "P", "CLUB", "#").forEach {
+                        Text(it, color = Mint, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(48.dp))
+                    }
+                }
+                standings.forEachIndexed { index, standing ->
+                    Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val values = listOf(
+                            standing.points.toString(), standing.goalDifference.toString(),
+                            standing.goalsAgainst.toString(), standing.goalsFor.toString(),
+                            standing.losses.toString(), standing.draws.toString(),
+                            standing.wins.toString(), standing.played.toString(),
+                            ClubCatalog.find(standing.clubId)?.name ?: standing.clubId,
+                            (index + 1).toString()
+                        )
+                        values.forEachIndexed { valueIndex, value ->
+                            Text(
+                                value,
+                                color = if (valueIndex == 0) Mint else White,
+                                fontSize = if (valueIndex == 8) 10.sp else 11.sp,
+                                fontWeight = if (valueIndex == 0 || valueIndex == 8) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.width(if (valueIndex == 8) 142.dp else 48.dp)
+                            )
+                        }
+                    }
+                    Divider(color = PanelLight)
+                }
+            }
+        }
     }
 }
