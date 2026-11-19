@@ -214,7 +214,7 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
             "tactics" -> TacticsScreen(save, onSaveChange)
             "managers" -> ManagerStoreScreen(save, onSaveChange)
             "market" -> MarketScreen(save, onSaveChange)
-            "upgrade" -> InfoScreen("ارتقای بازیکنان", "سیستم امتیاز ارتقا و انتخاب ویژگی اختصاصی یا خودکار در مرحله بعد اضافه می‌شود.")
+            "upgrade" -> UpgradeScreen(save, onSaveChange)
             "honors" -> InfoScreen("افتخارات", "جام‌ها و جوایز پایان فصل در این بخش ثبت خواهند شد.")
             "finance" -> FinanceScreen(save, onSaveChange)
             "news" -> InfoScreen("اخبار باشگاه", "رویدادهای مهم باشگاه و اعلان‌ها در این بخش نمایش داده می‌شوند.")
@@ -521,6 +521,110 @@ private fun MarketScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
             },
             dismissButton = { TextButton(onClick = { pendingSale = null }) { Text("انصراف") } }
         )
+    }
+}
+
+@Composable
+private fun UpgradeScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
+    var selectedPlayerId by rememberSaveable { mutableStateOf(save.players.firstOrNull()?.id ?: "") }
+    var selectedAttribute by rememberSaveable { mutableStateOf(PlayerAttribute.PACE.name) }
+    val selectedPlayer = save.players.firstOrNull { it.id == selectedPlayerId }
+    val attribute = runCatching { PlayerAttribute.valueOf(selectedAttribute) }.getOrDefault(PlayerAttribute.PACE)
+    val attributeNames = mapOf(
+        PlayerAttribute.PACE to "سرعت", PlayerAttribute.SHOOTING to "شوت",
+        PlayerAttribute.PASSING to "پاس", PlayerAttribute.DRIBBLING to "دریبل",
+        PlayerAttribute.DEFENDING to "دفاع", PlayerAttribute.PHYSICAL to "قدرت بدنی",
+        PlayerAttribute.GOALKEEPING to "دروازه‌بانی", PlayerAttribute.TACTICAL_IQ to "هوش تاکتیکی"
+    )
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("مرکز توسعه بازیکنان", color = White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+        Text("امتیازهای توسعه برای تقویت ویژگی‌های بازیکنان استفاده می‌شود.", color = Muted, fontSize = 11.sp)
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF3A3020)), shape = RoundedCornerShape(18.dp)) {
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("امتیاز", color = Color(0xFFFFD166), fontSize = 25.sp, fontWeight = FontWeight.Black)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("موجودی توسعه", color = Color(0xFFFFE5A3), fontSize = 11.sp)
+                    Text(save.developmentPoints.toString(), color = White, fontSize = 27.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+        if (save.players.isEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+                Text("برای ارتقا، ابتدا باید بازیکنان واقعی باشگاه به ذخیره بازی اضافه شوند. در حال حاضر بازیکنی برای انتخاب وجود ندارد.", modifier = Modifier.padding(18.dp), color = Muted, fontSize = 13.sp, lineHeight = 21.sp)
+            }
+        } else {
+            Text("انتخاب بازیکن", color = White, fontWeight = FontWeight.Bold)
+            LazyRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(save.players, key = { it.id }) { player ->
+                    if (player.id == selectedPlayerId) {
+                        Button(onClick = { selectedPlayerId = player.id }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD166), contentColor = Navy)) {
+                            Text("${player.name} • ${player.overall}", fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        OutlinedButton(onClick = { selectedPlayerId = player.id }) {
+                            Text("${player.name} • ${player.overall}", color = Muted)
+                        }
+                    }
+                }
+            }
+            selectedPlayer?.let { player ->
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(15.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text(player.name, color = White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Text("${player.position}  •  OVR ${player.overall}", color = Color(0xFFFFD166), fontWeight = FontWeight.Bold)
+                        Text("ویژگی‌ها", color = Muted, fontSize = 11.sp)
+                        attributeNames.forEach { (key, label) ->
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(PlayerDevelopmentEngine.value(player, key).toString(), color = White, fontWeight = FontWeight.Bold)
+                                Text(label, color = if (key == attribute) Color(0xFFFFD166) else Muted, fontWeight = if (key == attribute) FontWeight.Bold else FontWeight.Normal)
+                            }
+                        }
+                    }
+                }
+                Text("ویژگی موردنظر برای ارتقای اختصاصی", color = White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                LazyRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    items(PlayerAttribute.values().toList()) { key ->
+                        if (key == attribute) {
+                            Button(onClick = { selectedAttribute = key.name }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD166), contentColor = Navy)) {
+                                Text(attributeNames[key] ?: key.name)
+                            }
+                        } else {
+                            OutlinedButton(onClick = { selectedAttribute = key.name }) {
+                                Text(attributeNames[key] ?: key.name, color = Muted)
+                            }
+                        }
+                    }
+                }
+                val autoAttribute = PlayerDevelopmentEngine.automaticAttribute(player)
+                val autoCost = EconomyEngine.upgradeCost(5L, false).toInt()
+                val customCost = EconomyEngine.upgradeCost(5L, true).toInt()
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            val upgraded = PlayerDevelopmentEngine.applyUpgrade(player, autoAttribute, 1)
+                            onSaveChange(save.copy(players = save.players.map { if (it.id == player.id) upgraded else it }, developmentPoints = save.developmentPoints - autoCost))
+                        },
+                        enabled = save.developmentPoints >= autoCost && PlayerDevelopmentEngine.value(player, autoAttribute) < 100,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3C9A79), contentColor = White)
+                    ) { Text("خودکار • $autoCost امتیاز", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                    Button(
+                        onClick = {
+                            val upgraded = PlayerDevelopmentEngine.applyUpgrade(player, attribute, 1)
+                            onSaveChange(save.copy(players = save.players.map { if (it.id == player.id) upgraded else it }, developmentPoints = save.developmentPoints - customCost))
+                        },
+                        enabled = save.developmentPoints >= customCost && PlayerDevelopmentEngine.value(player, attribute) < 100,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB18435), contentColor = Navy)
+                    ) { Text("اختصاصی • $customCost امتیاز", fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                }
+                Text("ارتقای خودکار، ضعیف‌ترین ویژگی متناسب با پست را انتخاب می‌کند. ارتقای اختصاصی دو برابر امتیاز هزینه دارد.", color = Muted, fontSize = 10.sp, lineHeight = 17.sp)
+            }
+        }
     }
 }
 
