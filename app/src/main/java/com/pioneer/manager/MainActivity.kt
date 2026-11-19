@@ -219,6 +219,8 @@ private fun HomeScreen(save: GameSave) {
                 Text("باشگاه من", color = Muted, fontSize = 13.sp)
                 Text(save.clubName, color = White, fontSize = 25.sp, fontWeight = FontWeight.Black)
                 Text("Premier League  •  2026/27", color = Mint, fontSize = 12.sp)
+                Spacer(Modifier.height(10.dp))
+                Text("سرمربی: " + save.managerName, color = White, fontSize = 13.sp)
                 Spacer(Modifier.height(18.dp))
                 Text("بودجه باشگاه", color = Muted, fontSize = 12.sp)
                 Text("€" + "%,d".format(save.budget), color = Mint, fontSize = 28.sp, fontWeight = FontWeight.Bold)
