@@ -47,7 +47,9 @@ data class GameSave(
     val budget: Long,
     val season: Int = 1,
     val gameDay: Int = 1,
-    val lastTickEpochMillis: Long = System.currentTimeMillis()
+    val lastTickEpochMillis: Long = System.currentTimeMillis(),
+    val formation: String = "4-3-3",
+    val tactics: Tactics = Tactics()
 )
 
 object LeagueRules {
