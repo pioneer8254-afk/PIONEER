@@ -375,7 +375,6 @@ private fun StatCard(
     }
 }
 
-@Composable
 private val PlayerHexagon = GenericShape { size, _ ->
     moveTo(size.width * 0.25f, 0f)
     lineTo(size.width * 0.75f, 0f)
