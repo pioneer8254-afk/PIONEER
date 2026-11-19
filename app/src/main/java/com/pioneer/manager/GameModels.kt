@@ -51,7 +51,8 @@ data class GameSave(
     val gameDay: Int = 1,
     val lastTickEpochMillis: Long = System.currentTimeMillis(),
     val formation: String = "4-3-3",
-    val tactics: Tactics = Tactics()
+    val tactics: Tactics = Tactics(),
+    val fixtures: List<Fixture> = emptyList()
 )
 
 object LeagueRules {
