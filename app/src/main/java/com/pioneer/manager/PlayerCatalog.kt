@@ -10,6 +10,8 @@ import com.google.gson.reflect.TypeToken
  * The 1-100 attributes are gameplay estimates derived from market value and season points,
  * not official player ratings.
  */
+data class CatalogPlayer(val clubId: String, val player: Player)
+
 object PlayerCatalog {
     private const val ASSET_FILE = "premier_league_2026_27_players.json"
     @Volatile private var cached: Map<String, List<Player>>? = null
