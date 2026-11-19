@@ -366,6 +366,7 @@ private fun StatCard(
 @Composable
 private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
+    val lineup = StartingLineupEngine.validate(save)
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalAlignment = Alignment.End,
@@ -394,11 +395,38 @@ private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
         } else {
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 items(save.players, key = { it.id }) { player ->
-                    PlayerRosterCard(player = player, onClick = { selectedPlayer = player })
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(
+                            onClick = {
+                                val updated = runCatching { StartingLineupEngine.toggle(save, player.id) }.getOrNull()
+                                if (updated != null) onSaveChange(updated)
+                            },
+                            modifier = Modifier.width(92.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = if (player.id in save.startingLineupPlayerIds) Mint else Muted
+                            )
+                        ) { Text(if (player.id in save.startingLineupPlayerIds) "انتخاب شد" else "انتخاب") }
+                        Box(modifier = Modifier.weight(1f)) {
+                            PlayerRosterCard(player = player, onClick = { selectedPlayer = player })
+                        }
+                    }
                 }
             }
         }
-        Text("OVR بر اساس پست بازیکن محاسبه می‌شود • انتخاب هر کارت برای جزئیات", color = Muted, fontSize = 10.sp)
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF182D36)), shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(13.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("${save.startingLineupPlayerIds.size}/11", color = Color(0xFF75E7C0), fontWeight = FontWeight.Black)
+                    Text("ترکیب اصلی مسابقه", color = White, fontWeight = FontWeight.Bold)
+                }
+                Text(
+                    if (lineup.isValid) "ترکیب معتبر است؛ یک دروازه‌بان و ۱۰ بازیکن دیگر انتخاب شده‌اند."
+                    else "برای معتبر شدن ترکیب، دقیقاً ۱۱ بازیکن و یک دروازه‌بان انتخاب کنید.",
+                    color = if (lineup.isValid) Mint else Color(0xFFFFC56B), fontSize = 11.sp
+                )
+            }
+        }
+        Text("برای تعیین ترکیب اصلی از دکمه انتخاب کنار هر بازیکن استفاده کنید.", color = Muted, fontSize = 10.sp)
     }
     selectedPlayer?.let { player ->
         AlertDialog(
