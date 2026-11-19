@@ -53,6 +53,32 @@ class StartingLineupEngineTest {
     }
 
     @Test
+    fun fourThreeThreeRequiresFourDefendersThreeMidfieldersAndThreeForwards() {
+        var career = save()
+        listOf("gk", "cb1", "cb2", "lb", "rb", "cm1", "cm2", "cam", "lw", "rw", "st")
+            .forEach { career = StartingLineupEngine.toggle(career, it) }
+        assertTrue(StartingLineupEngine.validateFormation(career, "4-3-3").isValid)
+    }
+
+    @Test
+    fun wrongFormationRoleCountsAreRejected() {
+        var career = save()
+        listOf("gk", "cb1", "cb2", "lb", "rb", "cm1", "cm2", "cam", "lw", "rw", "st")
+            .forEach { career = StartingLineupEngine.toggle(career, it) }
+        val validation = StartingLineupEngine.validateFormation(career, "3-5-2")
+        assertFalse(validation.isValid)
+        assertTrue(validation.errors.any { it.contains("3 defenders required") })
+    }
+
+    @Test
+    fun unknownFormationIsRejected() {
+        var career = save()
+        listOf("gk", "cb1", "cb2", "lb", "rb", "cm1", "cm2", "cam", "lw", "rw", "st")
+            .forEach { career = StartingLineupEngine.toggle(career, it) }
+        assertFalse(StartingLineupEngine.validateFormation(career, "4-4-1-1").isValid)
+    }
+
+    @Test
     fun removedPlayersAreDetectedDuringValidation() {
         val career = save().copy(startingLineupPlayerIds = listOf("gk", "missing"))
         assertTrue(StartingLineupEngine.validate(career).errors.any { it.contains("no longer") })
