@@ -539,6 +539,7 @@ private fun MarketScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
                         val result = TransferEngine.sellPlayer(save.players, player.id, save.budget, daily)
                         onSaveChange(save.copy(
                             players = result.squad,
+                            startingLineupPlayerIds = save.startingLineupPlayerIds.filter { it != player.id },
                             budget = result.budget,
                             transferCounters = result.counters,
                             financeLedger = save.financeLedger + result.financeEntry
