@@ -90,7 +90,11 @@ class CareerMatchEngineTest {
             firstHalfResult = MatchResult(1, 0, 55, 6, 2),
             secondHalfResult = MatchResult(1, 1, 52, 5, 4)
         )
-        val completed = CareerMatchEngine.complete(career, match.copy(session = finishedSession))
+        val completed = CareerMatchEngine.complete(
+            career.copy(activeMatch = match.copy(session = finishedSession)),
+            match.copy(session = finishedSession)
+        )
+        assertEquals(null, completed.activeMatch)
         assertTrue(completed.fixtures.single().played)
         assertEquals(2, completed.fixtures.single().homeGoals)
         assertEquals(1, completed.fixtures.single().awayGoals)
