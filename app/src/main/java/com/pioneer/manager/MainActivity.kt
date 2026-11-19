@@ -3,6 +3,11 @@ package com.pioneer.manager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -371,6 +376,50 @@ private fun StatCard(
 }
 
 @Composable
+private val PlayerHexagon = GenericShape { size, _ ->
+    moveTo(size.width * 0.25f, 0f)
+    lineTo(size.width * 0.75f, 0f)
+    lineTo(size.width, size.height * 0.5f)
+    lineTo(size.width * 0.75f, size.height)
+    lineTo(size.width * 0.25f, size.height)
+    lineTo(0f, size.height * 0.5f)
+    close()
+}
+
+@Composable
+private fun HexLineupRow(players: List<Player>, emptyLabel: String, onPlayerClick: (Player) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (players.isEmpty()) {
+            Text(emptyLabel, color = Color(0xFF8DA99F), fontSize = 9.sp)
+        } else {
+            players.forEach { player ->
+                Column(
+                    modifier = Modifier
+                        .width(64.dp)
+                        .height(76.dp)
+                        .padding(horizontal = 2.dp)
+                        .clip(PlayerHexagon)
+                        .background(Color(0xFF1D4B3D))
+                        .border(1.dp, Mint.copy(alpha = 0.75f), PlayerHexagon)
+                        .clickable { onPlayerClick(player) }
+                        .padding(horizontal = 3.dp, vertical = 7.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(player.overall.toString(), color = Color(0xFFFFD27A), fontSize = 15.sp, fontWeight = FontWeight.Black)
+                    Text(player.position, color = Mint, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(player.name.substringBefore(" "), color = White, fontSize = 8.sp, maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
     val lineup = StartingLineupEngine.validateFormation(save, save.formation)
@@ -390,6 +439,35 @@ private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
             StatCard("دروازه‌بان", save.players.count { it.position == "GK" }.toString(), Modifier.weight(1f), Color(0xFFFFC56B))
             StatCard("مدافع", save.players.count { it.position in listOf("CB", "LB", "RB", "LWB", "RWB") }.toString(), Modifier.weight(1f), Color(0xFF71B9FF))
             StatCard("هافبک و مهاجم", save.players.count { it.position !in listOf("GK", "CB", "LB", "RB", "LWB", "RWB") }.toString(), Modifier.weight(1f), Color(0xFFB69AFF))
+        }
+        if (save.players.isNotEmpty()) {
+            val selected = StartingLineupEngine.selectedPlayers(save)
+            val goalkeepers = selected.filter { it.position.equals("GK", ignoreCase = true) }
+            val defenders = selected.filter { it.position.uppercase() in setOf("CB", "LB", "RB", "LWB", "RWB") }
+            val midfielders = selected.filter { it.position.uppercase() in setOf("DM", "CDM", "CM", "CAM", "LM", "RM") }
+            val forwards = selected.filter { it.position.uppercase() in setOf("ST", "CF", "LW", "RW", "LF", "RF") }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF123329)),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 7.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                ) {
+                    Text("چیدمان زمین • ${save.formation}", color = Mint, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    HexLineupRow(goalkeepers, "دروازه‌بان", onPlayerClick = { selectedPlayer = it })
+                    HexLineupRow(forwards, "مهاجم", onPlayerClick = { selectedPlayer = it })
+                    HexLineupRow(midfielders, "هافبک", onPlayerClick = { selectedPlayer = it })
+                    HexLineupRow(defenders, "مدافع", onPlayerClick = { selectedPlayer = it })
+                    Text(
+                        if (selected.isEmpty()) "برای نمایش بازیکنان، ترکیب اصلی را انتخاب کن"
+                        else "برای دیدن اطلاعات بازیکن، کارت شش‌ضلعی را لمس کن",
+                        color = Color(0xFFB4D2C8), fontSize = 9.sp
+                    )
+                }
+            }
         }
         if (save.players.isEmpty()) {
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
