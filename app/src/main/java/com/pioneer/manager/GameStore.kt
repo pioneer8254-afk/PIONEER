@@ -12,7 +12,22 @@ object GameStore {
     fun load(context: Context): GameSave? {
         val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(SAVE_KEY, null)
             ?: return null
-        return runCatching { gson.fromJson(raw, GameSave::class.java) }.getOrNull()
+        return runCatching {
+            val parsed = gson.fromJson(raw, GameSave::class.java)
+            val players = parsed.players.orEmpty()
+            val validPlayerIds = players.map { it.id }.toSet()
+            parsed.copy(
+                tactics = parsed.tactics ?: Tactics(),
+                fixtures = parsed.fixtures.orEmpty(),
+                players = players,
+                transferCounters = parsed.transferCounters ?: TransferCounters(gameDay = parsed.gameDay),
+                financeLedger = parsed.financeLedger.orEmpty(),
+                startingLineupPlayerIds = parsed.startingLineupPlayerIds.orEmpty()
+                    .distinct()
+                    .filter { it in validPlayerIds }
+                    .take(StartingLineupEngine.REQUIRED_PLAYERS)
+            )
+        }.getOrNull()
     }
 
     fun save(context: Context, save: GameSave) {
