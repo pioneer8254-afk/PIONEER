@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -110,7 +114,7 @@ fun PioneerApp() {
 @Composable
 private fun ClubPicker(onSelect: (Club) -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp),
+        modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.End
     ) {
         Text("PIONEER", color = Mint, fontSize = 30.sp, fontWeight = FontWeight.Black)
@@ -123,7 +127,7 @@ private fun ClubPicker(onSelect: (Club) -> Unit) {
             Text("Premier League", color = Muted, fontSize = 12.sp)
         }
         Spacer(Modifier.height(8.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             items(ClubCatalog.premierLeague) { club ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -157,7 +161,7 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
         "tactics" to "تاکتیک", "managers" to "مربیان", "market" to "بازار", "upgrade" to "ارتقا", "honors" to "افتخارات",
         "finance" to "مالی", "news" to "اخبار", "settings" to "تنظیمات"
     )
-    Column(modifier = Modifier.fillMaxSize().padding(top = 18.dp)) {
+    Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(top = 10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -187,6 +191,7 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
             }
         }
         Divider(color = PanelLight)
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
         when (activeTab) {
             "home" -> HomeScreen(save)
             "squad" -> InfoScreen("ترکیب تیم", "بانک بازیکنان واقعی فصل 2026/27 و کارت‌های شش‌ضلعی در گام بعدی متصل می‌شود.")
@@ -203,6 +208,7 @@ private fun MainDashboard(save: GameSave, activeTab: String, onTabChange: (Strin
                 onSaveChange(save.copy(clubName = newName.trim()))
             }
             else -> HomeScreen(save)
+        }
         }
     }
 }
@@ -421,7 +427,7 @@ private fun FixturesScreen(save: GameSave) {
 private fun LeagueTableScreen(save: GameSave) {
     val clubIds = ClubCatalog.premierLeague.map { it.id }
     val standings = LeagueEngine.calculateStandings(clubIds, save.fixtures)
-    Column(modifier = Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.End) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp), horizontalAlignment = Alignment.End) {
         Text("جدول Premier League", color = Mint, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Text("امتیازدهی: برد 3 • مساوی 1 • باخت 0", color = Muted, fontSize = 11.sp)
         Spacer(Modifier.height(10.dp))
