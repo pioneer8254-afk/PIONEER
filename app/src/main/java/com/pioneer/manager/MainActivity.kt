@@ -419,6 +419,64 @@ private fun HexLineupRow(players: List<Player>, emptyLabel: String, onPlayerClic
 }
 
 @Composable
+private fun SquadFormationBoard(save: GameSave, onPlayerClick: (Player) -> Unit) {
+    val selected = StartingLineupEngine.selectedPlayers(save)
+    val goalkeepers = selected.filter { it.position.equals("GK", ignoreCase = true) }
+    val defenders = selected.filter { it.position.uppercase() in setOf("CB", "LB", "RB", "LWB", "RWB") }
+    val midfielders = selected.filter { it.position.uppercase() in setOf("DM", "CDM", "CM", "CAM", "LM", "RM") }
+    val forwards = selected.filter { it.position.uppercase() in setOf("ST", "CF", "LW", "RW", "LF", "RF") }
+
+    val defensiveMidfielders: List<Player>
+    val attackingMidfielders: List<Player>
+    when (save.formation) {
+        "4-2-3-1" -> {
+            val preferred = midfielders.filter { it.position.uppercase() in setOf("DM", "CDM") }
+            defensiveMidfielders = (preferred + midfielders.filterNot { it in preferred }).take(2)
+            attackingMidfielders = midfielders.filterNot { it in defensiveMidfielders }
+        }
+        "4-1-4-1" -> {
+            val preferred = midfielders.filter { it.position.uppercase() in setOf("DM", "CDM") }
+            defensiveMidfielders = (preferred + midfielders.filterNot { it in preferred }).take(1)
+            attackingMidfielders = midfielders.filterNot { it in defensiveMidfielders }
+        }
+        else -> {
+            defensiveMidfielders = emptyList()
+            attackingMidfielders = midfielders
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF123329)),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 7.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Text("چیدمان زمین • ${save.formation}", color = Mint, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            HexLineupRow(forwards, "مهاجم", onPlayerClick)
+            if (save.formation == "4-2-3-1" || save.formation == "4-1-4-1") {
+                Divider(color = Color(0xFF2B5B4B), thickness = 1.dp)
+                HexLineupRow(attackingMidfielders, if (save.formation == "4-2-3-1") "هافبک هجومی" else "هافبک کناری", onPlayerClick)
+                HexLineupRow(defensiveMidfielders, "هافبک دفاعی", onPlayerClick)
+            } else {
+                HexLineupRow(attackingMidfielders, "هافبک", onPlayerClick)
+            }
+            Divider(color = Color(0xFF2B5B4B), thickness = 1.dp)
+            HexLineupRow(defenders, "مدافع", onPlayerClick)
+            HexLineupRow(goalkeepers, "دروازه‌بان", onPlayerClick)
+            Text(
+                if (selected.isEmpty()) "برای نمایش بازیکنان، ترکیب اصلی را انتخاب کن"
+                else "برای دیدن اطلاعات بازیکن، کارت شش‌ضلعی را لمس کن",
+                color = Color(0xFFB4D2C8), fontSize = 9.sp
+            )
+        }
+    }
+}
+
+@Composable
 private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
     val lineup = StartingLineupEngine.validateFormation(save, save.formation)
@@ -440,33 +498,7 @@ private fun SquadScreen(save: GameSave, onSaveChange: (GameSave) -> Unit) {
             StatCard("هافبک و مهاجم", save.players.count { it.position !in listOf("GK", "CB", "LB", "RB", "LWB", "RWB") }.toString(), Modifier.weight(1f), Color(0xFFB69AFF))
         }
         if (save.players.isNotEmpty()) {
-            val selected = StartingLineupEngine.selectedPlayers(save)
-            val goalkeepers = selected.filter { it.position.equals("GK", ignoreCase = true) }
-            val defenders = selected.filter { it.position.uppercase() in setOf("CB", "LB", "RB", "LWB", "RWB") }
-            val midfielders = selected.filter { it.position.uppercase() in setOf("DM", "CDM", "CM", "CAM", "LM", "RM") }
-            val forwards = selected.filter { it.position.uppercase() in setOf("ST", "CF", "LW", "RW", "LF", "RF") }
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF123329)),
-                shape = RoundedCornerShape(18.dp)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 7.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(9.dp)
-                ) {
-                    Text("چیدمان زمین • ${save.formation}", color = Mint, fontSize = 13.sp, fontWeight = FontWeight.Black)
-                    HexLineupRow(forwards, "مهاجم", onPlayerClick = { selectedPlayer = it })
-                    HexLineupRow(midfielders, "هافبک", onPlayerClick = { selectedPlayer = it })
-                    HexLineupRow(defenders, "مدافع", onPlayerClick = { selectedPlayer = it })
-                    HexLineupRow(goalkeepers, "دروازه‌بان", onPlayerClick = { selectedPlayer = it })
-                    Text(
-                        if (selected.isEmpty()) "برای نمایش بازیکنان، ترکیب اصلی را انتخاب کن"
-                        else "برای دیدن اطلاعات بازیکن، کارت شش‌ضلعی را لمس کن",
-                        color = Color(0xFFB4D2C8), fontSize = 9.sp
-                    )
-                }
-            }
+            SquadFormationBoard(save, onPlayerClick = { selectedPlayer = it })
         }
         if (save.players.isEmpty()) {
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
