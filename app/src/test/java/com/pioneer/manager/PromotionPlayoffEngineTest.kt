@@ -42,7 +42,7 @@ class PromotionPlayoffEngineTest {
         val result = PromotionPlayoffEngine.resolveSemiFinal(
             tie,
             PlayoffLegResult("l1-6", "l1-3", 1, 0),
-            PlayoffLegResult("l1-3", "l1-6", 1, 2),
+            PlayoffLegResult("l1-3", "l1-6", 3, 2),
             penaltyWinnerClubId = "l1-3"
         )
         assertEquals("l1-3", result.winnerClubId)
