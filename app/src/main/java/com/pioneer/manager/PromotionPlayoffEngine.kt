@@ -24,8 +24,8 @@ data class PromotionPlayoffDecision(
 data class PromotionPlayoffBracket(
     val division: Division,
     val semiFinals: List<PromotionPlayoffTie>,
-    val finalHomeClubId: String,
-    val finalAwayClubId: String,
+    val finalHomeClubId: String? = null,
+    val finalAwayClubId: String? = null,
     val finalIsNeutralVenue: Boolean = true
 )
 
@@ -40,6 +40,10 @@ object PromotionPlayoffEngine {
             division == Division.LEAGUE_ONE || division == Division.LEAGUE_TWO) {
             "Premier League has no promotion playoff."
         }
+        val expectedSize = 24
+        require(finalRankedClubIds.size == expectedSize && finalRankedClubIds.distinct().size == expectedSize) {
+            "Final ranking must contain every club exactly once."
+        }
         val qualifiers = SeasonEngine.promotionOutcome(division, finalRankedClubIds).playoffTeams
         require(qualifiers.size == 4) { "Exactly four playoff clubs are required." }
 
@@ -50,8 +54,6 @@ object PromotionPlayoffEngine {
         return PromotionPlayoffBracket(
             division = division,
             semiFinals = semiFinals,
-            finalHomeClubId = "",
-            finalAwayClubId = ""
         )
     }
 
@@ -65,8 +67,14 @@ object PromotionPlayoffEngine {
             listOf(it.higherSeedClubId, it.lowerSeedClubId)
         }.toSet()
         require(firstSemiFinalWinner in qualified && secondSemiFinalWinner in qualified)
-        require(bracket.semiFinals.any { firstSemiFinalWinner in setOf(it.higherSeedClubId, it.lowerSeedClubId) })
-        require(bracket.semiFinals.any { secondSemiFinalWinner in setOf(it.higherSeedClubId, it.lowerSeedClubId) })
+        val firstTie = bracket.semiFinals[0]
+        val secondTie = bracket.semiFinals[1]
+        val firstTieClubs = setOf(firstTie.higherSeedClubId, firstTie.lowerSeedClubId)
+        val secondTieClubs = setOf(secondTie.higherSeedClubId, secondTie.lowerSeedClubId)
+        require(
+            (firstSemiFinalWinner in firstTieClubs && secondSemiFinalWinner in secondTieClubs) ||
+                (firstSemiFinalWinner in secondTieClubs && secondSemiFinalWinner in firstTieClubs)
+        ) { "The final must contain one winner from each semi-final." }
         return bracket.copy(
             finalHomeClubId = firstSemiFinalWinner,
             finalAwayClubId = secondSemiFinalWinner
@@ -98,12 +106,13 @@ object PromotionPlayoffEngine {
         awayGoalsAfterExtraTime: Int,
         penaltyWinnerClubId: String? = null
     ): PromotionPlayoffDecision {
-        require(bracket.finalHomeClubId.isNotBlank() && bracket.finalAwayClubId.isNotBlank()) {
-            "The playoff final has not been created."
-        }
+        val homeClubId = bracket.finalHomeClubId
+            ?: throw IllegalArgumentException("The playoff final has not been created.")
+        val awayClubId = bracket.finalAwayClubId
+            ?: throw IllegalArgumentException("The playoff final has not been created.")
         require(homeGoalsAfterExtraTime >= 0 && awayGoalsAfterExtraTime >= 0)
         return decide(
-            bracket.finalHomeClubId, bracket.finalAwayClubId,
+            homeClubId, awayClubId,
             homeGoalsAfterExtraTime, awayGoalsAfterExtraTime, penaltyWinnerClubId
         )
     }
