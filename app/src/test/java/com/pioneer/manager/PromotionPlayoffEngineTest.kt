@@ -52,10 +52,10 @@ class PromotionPlayoffEngineTest {
     @Test
     fun createsNeutralFinalAndResolvesIt() {
         val bracket = PromotionPlayoffEngine.createBracket(Division.LEAGUE_TWO, (1..24).map { "l2-$it" })
-        val withFinal = PromotionPlayoffEngine.createFinal(bracket, "l2-3", "l2-5")
+        val withFinal = PromotionPlayoffEngine.createFinal(bracket, "l2-4", "l2-6")
         assertTrue(withFinal.finalIsNeutralVenue)
         val result = PromotionPlayoffEngine.resolveFinal(withFinal, 2, 1)
-        assertEquals("l2-3", result.winnerClubId)
+        assertEquals("l2-4", result.winnerClubId)
     }
 
     @Test
